@@ -216,9 +216,19 @@ model Track {
   offers    PriceOffer[]
   reviews   Review[]
   likes     Like[]
+  playEvents PlayEvent[]
 
   commissionRequestId String?            @unique // 이 트랙이 곡 의뢰 납품물이면 해당 CommissionRequest
   commissionRequest   CommissionRequest? @relation(fields: [commissionRequestId], references: [id])
+}
+
+// Track.playCount는 누적 카운터라 "추이"를 그릴 수 없어서, Creator 통계 대시보드용으로
+// 재생 시점을 별도로 기록. (재생 시작 시 두 군데에 같이 씀 — playCount increment는 그대로 유지)
+model PlayEvent {
+  id        String   @id @default(cuid())
+  trackId   String
+  track     Track    @relation(fields: [trackId], references: [id])
+  createdAt DateTime @default(now())
 }
 
 model Guide {

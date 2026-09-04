@@ -15,6 +15,7 @@ const NAV = [
   { href: "/upload", label: "업로드" },
   { href: "/studio", label: "Studio" },
   { href: "/inbox", label: "Inbox" },
+  { href: "/likes", label: "좋아요" },
   { href: "/orders", label: "구매내역" },
   { href: "/wallet", label: "지갑" },
 ] as const;

@@ -4,6 +4,7 @@ export const DEMO_PASSWORD = "password1234";
 
 export const DEMO_ACCOUNTS = [
   { email: "sasr10@naver.com", label: "광석", role: "Creator", password: "kk101312!@" },
+  { email: "korg900@naver.com", label: "KEY", role: "Creator", password: "kk101312!@" },
   { email: "seoah@voicemap.test", label: "서아", role: "Performer" },
   { email: "minji@voicemap.test", label: "민지", role: "Performer" },
   { email: "minsu@voicemap.test", label: "민수", role: "Buyer (A&R)" },

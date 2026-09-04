@@ -1,0 +1,7 @@
+-- CreateTable
+CREATE TABLE "PlayEvent" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "trackId" TEXT NOT NULL,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "PlayEvent_trackId_fkey" FOREIGN KEY ("trackId") REFERENCES "Track" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
+);

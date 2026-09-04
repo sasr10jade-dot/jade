@@ -1,5 +1,8 @@
+import Link from "next/link";
+import { Badge } from "@/components/ui/badge";
 import { TrackTile, type TileTrack } from "@/components/track-tile";
 import { prisma } from "@/lib/prisma";
+import { displayName } from "@/lib/display-name";
 import type { Prisma } from "@prisma/client";
 
 const TRACK_INCLUDE = {
@@ -20,6 +23,8 @@ export default async function DiscoverPage({
 }) {
   const { genre, mood, bpmMin, bpmMax, sort } = await searchParams;
   const hasFilter = !!(genre || mood || bpmMin || bpmMax || (sort && sort !== "popular"));
+
+  const topCreators = hasFilter ? [] : await getTopCreators();
 
   const [genreRows, moodRows] = await Promise.all([
     prisma.track.findMany({
@@ -137,6 +142,8 @@ export default async function DiscoverPage({
             ))}
           </div>
 
+          {topCreators.length > 0 && <CreatorRow creators={topCreators} />}
+
           <TrackRow title="🔥 인기 급상승" tracks={popular} />
 
           {[...genreGroups.entries()].map(([g, list]) => (
@@ -152,6 +159,79 @@ export default async function DiscoverPage({
         </>
       )}
     </div>
+  );
+}
+
+type TopCreator = {
+  id: string;
+  name: string;
+  nickname: string | null;
+  displayNickname: boolean;
+  isSeedCreator: boolean;
+  followerCount: number;
+  totalPlays: number;
+  trackCount: number;
+};
+
+// 발견성/신뢰 요소 — 누적 재생수 기준 상위 크리에이터. 팔로워 수는 서비스 초기라
+// 대부분 0에 가까워 변별력이 없으므로(신규 설치 기준), 데이터가 훨씬 풍부한 누적
+// 재생수를 랭킹 지표로 쓰고 팔로워 수는 카드에 보조 정보로만 노출.
+async function getTopCreators(): Promise<TopCreator[]> {
+  const creators = await prisma.user.findMany({
+    where: { role: "CREATOR", tracksCreated: { some: { removedByAdmin: false } } },
+    select: {
+      id: true,
+      name: true,
+      nickname: true,
+      displayNickname: true,
+      isSeedCreator: true,
+      _count: { select: { followers: true } },
+      tracksCreated: { where: { removedByAdmin: false }, select: { playCount: true } },
+    },
+  });
+
+  return creators
+    .map((c) => ({
+      id: c.id,
+      name: c.name,
+      nickname: c.nickname,
+      displayNickname: c.displayNickname,
+      isSeedCreator: c.isSeedCreator,
+      followerCount: c._count.followers,
+      totalPlays: c.tracksCreated.reduce((sum, t) => sum + t.playCount, 0),
+      trackCount: c.tracksCreated.length,
+    }))
+    .sort((a, b) => b.totalPlays - a.totalPlays || b.followerCount - a.followerCount)
+    .slice(0, 8);
+}
+
+function CreatorRow({ creators }: { creators: TopCreator[] }) {
+  return (
+    <section className="mt-10">
+      <h2 className="text-xl font-bold tracking-tight">🏆 인기 크리에이터</h2>
+      <div className="mt-4 -mx-5 flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-smooth px-5 pb-2 scrollbar-hide sm:mx-0 sm:px-0">
+        {creators.map((c) => (
+          <Link
+            key={c.id}
+            href={`/u/${c.id}`}
+            className="flex w-40 shrink-0 snap-start flex-col items-center gap-2 rounded-xl border border-border bg-card p-4 text-center transition hover:border-primary/50"
+          >
+            <div className="flex size-14 items-center justify-center rounded-full bg-primary text-lg font-bold text-primary-foreground">
+              {displayName(c).slice(0, 1)}
+            </div>
+            <span className="truncate text-sm font-semibold">{displayName(c)}</span>
+            {c.isSeedCreator && (
+              <Badge variant="secondary" className="text-[10px]">
+                초기 크리에이터
+              </Badge>
+            )}
+            <p className="text-xs text-muted-foreground">
+              재생 {c.totalPlays.toLocaleString()} · 팔로워 {c.followerCount.toLocaleString()}
+            </p>
+          </Link>
+        ))}
+      </div>
+    </section>
   );
 }
 

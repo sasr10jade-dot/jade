@@ -5,7 +5,9 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { formatKRW } from "@/lib/format";
 import { settleExpiredEscrows } from "@/lib/settlement";
+import { getCreatorStats } from "@/lib/creator-stats";
 import { StudioTrackThumbnail } from "./track-thumbnail";
+import { StatsSection } from "./stats-section";
 
 const STATUS_LABEL: Record<string, string> = {
   DRAFT: "가이드 대기중",
@@ -50,6 +52,8 @@ export default async function StudioPage() {
     .filter((o) => o.status === "SETTLED")
     .reduce((sum, o) => sum + o.netAmount, 0);
 
+  const stats = isCreator ? await getCreatorStats(session!.user.id) : null;
+
   return (
     <div className="mx-auto max-w-3xl px-5 py-10">
       <div className="flex items-center justify-between">
@@ -67,6 +71,8 @@ export default async function StudioPage() {
           Studio는 Creator 계정 전용 화면입니다. Creator로 가입 후 이용해주세요.
         </p>
       )}
+
+      {stats && stats.totalTracks > 0 && <StatsSection {...stats} />}
 
       {isCreator && tracks.length === 0 && (
         <p className="mt-6 text-sm text-muted-foreground">

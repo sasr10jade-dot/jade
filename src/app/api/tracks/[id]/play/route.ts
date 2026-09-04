@@ -12,7 +12,7 @@ export async function POST(
   try {
     await prisma.track.update({
       where: { id },
-      data: { playCount: { increment: 1 } },
+      data: { playCount: { increment: 1 }, playEvents: { create: {} } },
     });
   } catch {
     // Track may not exist (e.g. stale client) — not worth surfacing an error for a counter.
