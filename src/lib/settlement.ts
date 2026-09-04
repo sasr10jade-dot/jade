@@ -67,3 +67,35 @@ export async function settleExpiredEscrows() {
     await prisma.$transaction((tx) => releaseEscrow(tx, id));
   }
 }
+
+const REVIEW_REMINDER_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * 구매자가 7일 에스크로 검수 기간을 그냥 흘려보내고 있을 때 한 번 알려줌 — 곡 의뢰
+ * 마감 임박 알림(notifyUpcomingCommissionDeadlines)과 동일한 lazy-실행 + 1회성 발송
+ * 패턴. escrowReminderSentAt으로 페이지 재방문마다 중복 발송되지 않게 막는다.
+ */
+export async function notifyUpcomingEscrowReviews() {
+  const now = new Date();
+  const soon = await prisma.order.findMany({
+    where: {
+      status: "ESCROW",
+      escrowReminderSentAt: null,
+      escrowEndsAt: { gt: now, lte: new Date(now.getTime() + REVIEW_REMINDER_WINDOW_MS) },
+    },
+    include: { track: { select: { title: true } } },
+  });
+
+  for (const order of soon) {
+    await prisma.$transaction([
+      prisma.order.update({ where: { id: order.id }, data: { escrowReminderSentAt: now } }),
+      prisma.notification.create({
+        data: {
+          userId: order.buyerId,
+          type: "ESCROW_REVIEW_REMINDER",
+          message: `"${order.track.title}" 구매 건의 에스크로 검수 기간이 24시간 이내에 종료됩니다. 문제가 없다면 그대로 두면 자동 정산되고, 이의가 있다면 지금 제기해주세요.`,
+        },
+      }),
+    ]);
+  }
+}

@@ -400,6 +400,22 @@ http://localhost:3000 에서 확인.
       줄바꿈을 막고, 검색창을 `lg` 이상 폭에서만 보이게(그 아래는 돋보기 아이콘) 밀어
       좁은 폭에서 메뉴가 우선 확보되도록 조정.
 
+- [x] 서비스 고도화 3차 (3단계 순차 진행)
+  1. **PWA(홈 화면 설치)** — `src/app/manifest.ts`, `src/app/icon.tsx`,
+     `src/app/apple-icon.tsx` — Next App Router의 매니페스트/아이콘 파일 컨벤션으로
+     `next/og`의 `ImageResponse`를 코드로 렌더링(헤더 로고와 동일한 디자인, 별도 이미지
+     편집 툴/에셋 없이 재현 가능). `<link rel="manifest">`, `<link rel="icon">`,
+     `<link rel="apple-touch-icon">`이 레이아웃 수정 없이 자동으로 `<head>`에 삽입됨.
+     모바일에서 "홈 화면에 추가" 시 브라우저 주소창 없는 standalone 앱으로 실행.
+  2. **에스크로 검수 리마인더** — 곡 의뢰 마감 임박 알림과 동일한 패턴(lazy 실행 + 1회성
+     발송)을 주문에도 적용. 에스크로 종료 24시간 이내로 남았는데 구매자가 아직 검수/승인
+     하지 않은 주문에 알림 1회 발송(`Order.escrowReminderSentAt`으로 중복 발송 방지,
+     `notifyUpcomingEscrowReviews()`, `/orders` 진입 시 호출).
+  3. **좋아요 많은 트랙 랭킹** — Discover 정렬 옵션에 "좋아요순" 추가(`orderBy: { likes:
+     { _count: "desc" } }`), 좋아요가 1개 이상 쌓인 트랙이 있으면 기본 화면에
+     "❤️ 좋아요 많은 트랙" 가로 스크롤 행이 자동으로 노출(0건일 땐 숨김 — 인기
+     크리에이터 랭킹과 동일한 판단).
+
 ## 테스트 계정 (`npx prisma db seed` 실행 후)
 
 모두 비밀번호 `password1234`:

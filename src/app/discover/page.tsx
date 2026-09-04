@@ -7,12 +7,13 @@ import type { Prisma } from "@prisma/client";
 
 const TRACK_INCLUDE = {
   licenses: { where: { type: "EXCLUSIVE" as const } },
-  _count: { select: { guides: true } },
+  _count: { select: { guides: true, likes: true } },
   creator: { select: { name: true, nickname: true, displayNickname: true } },
 };
 
 const SORT_OPTIONS = [
   { value: "popular", label: "인기순" },
+  { value: "liked", label: "좋아요순" },
   { value: "newest", label: "최신순" },
 ] as const;
 
@@ -53,13 +54,26 @@ export default async function DiscoverPage({
     };
   }
   const orderBy: Prisma.TrackOrderByWithRelationInput[] =
-    sort === "newest" ? [{ createdAt: "desc" }] : [{ playCount: "desc" }, { createdAt: "desc" }];
+    sort === "newest"
+      ? [{ createdAt: "desc" }]
+      : sort === "liked"
+        ? [{ likes: { _count: "desc" } }, { createdAt: "desc" }]
+        : [{ playCount: "desc" }, { createdAt: "desc" }];
 
   const tracks = await prisma.track.findMany({ where, orderBy, include: TRACK_INCLUDE });
   const withGuideCount = tracks.map((t) => ({ ...t, guideCount: t._count.guides }));
 
   const featured = withGuideCount.slice(0, 3);
   const popular = withGuideCount.slice(0, 10);
+
+  const mostLiked = hasFilter
+    ? []
+    : await prisma.track.findMany({
+        where: { removedByAdmin: false, likes: { some: {} } },
+        orderBy: { likes: { _count: "desc" } },
+        take: 10,
+        include: TRACK_INCLUDE,
+      }).then((rows) => rows.map((t) => ({ ...t, guideCount: t._count.guides })));
 
   // 장르가 입력된 트랙만 장르별 가로 스크롤 섹션으로 묶는다 (미입력 트랙은 아래 전체 그리드에서 확인).
   const genreGroups = new Map<string, TileTrack[]>();
@@ -145,6 +159,8 @@ export default async function DiscoverPage({
           {topCreators.length > 0 && <CreatorRow creators={topCreators} />}
 
           <TrackRow title="🔥 인기 급상승" tracks={popular} />
+
+          {mostLiked.length > 0 && <TrackRow title="❤️ 좋아요 많은 트랙" tracks={mostLiked} />}
 
           {[...genreGroups.entries()].map(([g, list]) => (
             <TrackRow key={g} title={`🎵 ${g}`} tracks={list} />

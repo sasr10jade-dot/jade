@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { formatKRW } from "@/lib/format";
-import { settleExpiredEscrows } from "@/lib/settlement";
+import { settleExpiredEscrows, notifyUpcomingEscrowReviews } from "@/lib/settlement";
 import { ApproveOrderButton } from "./approve-order-button";
 import { DisputeButton } from "./dispute-button";
 import { ReviewForm } from "./review-form";
@@ -33,6 +33,7 @@ function daysLeft(escrowEndsAt: Date | null) {
 export default async function OrdersPage() {
   const session = await auth();
   await settleExpiredEscrows();
+  await notifyUpcomingEscrowReviews();
 
   const orders = session?.user
     ? await prisma.order.findMany({

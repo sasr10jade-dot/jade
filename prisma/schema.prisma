@@ -89,6 +89,7 @@ enum NotificationType {
   COMMISSION_DELIVERED
   COMMISSION_DEADLINE_SOON
   COMMISSION_CANCELLED
+  ESCROW_REVIEW_REMINDER
 }
 
 enum CommissionStatus {
@@ -352,6 +353,7 @@ model Order {
   downloaded   Boolean     @default(false) // lib/fee.ts calculateRefund() 환불율 분기 기준
   disputeReason String? // 구매자가 이의 제기 시 남긴 사유 (ESCROW 상태일 때만 제기 가능)
   disputedAt   DateTime?
+  escrowReminderSentAt DateTime? // 에스크로 종료 임박(24시간 이내) 알림을 이미 보냈는지 — 중복 발송 방지
 
   purchasedAt  DateTime    @default(now())
   escrowEndsAt DateTime? // purchasedAt + 7 days (Section 7 / Section 12)
