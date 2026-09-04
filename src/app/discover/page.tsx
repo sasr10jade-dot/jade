@@ -143,7 +143,7 @@ export default async function DiscoverPage({
           <p className="mt-6 text-sm text-muted-foreground">검색 결과 {tracks.length}건</p>
           <div className="mt-4 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {withGuideCount.map((t) => (
-              <TrackTile key={t.id} track={t} className="w-full" />
+              <TrackTile key={t.id} track={t} className="w-full" queue={withGuideCount} />
             ))}
           </div>
         </>
@@ -152,7 +152,7 @@ export default async function DiscoverPage({
           <h2 className="mt-10 text-xl font-bold tracking-tight">✨ 지금 주목할 트랙</h2>
           <div className="mt-4 grid gap-5 sm:grid-cols-3">
             {featured.map((t) => (
-              <TrackTile key={t.id} track={t} className="w-full" />
+              <TrackTile key={t.id} track={t} className="w-full" queue={featured} />
             ))}
           </div>
 
@@ -169,7 +169,7 @@ export default async function DiscoverPage({
           <h2 className="mt-10 text-xl font-bold tracking-tight">전체 트랙</h2>
           <div className="mt-4 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {withGuideCount.map((t) => (
-              <TrackTile key={t.id} track={t} className="w-full" />
+              <TrackTile key={t.id} track={t} className="w-full" queue={withGuideCount} />
             ))}
           </div>
         </>
@@ -284,7 +284,7 @@ function TrackRow({ title, tracks }: { title: string; tracks: TileTrack[] }) {
       <h2 className="text-xl font-bold tracking-tight">{title}</h2>
       <div className="mt-4 -mx-5 flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth px-5 pb-2 scrollbar-hide sm:mx-0 sm:px-0">
         {tracks.map((t) => (
-          <TrackTile key={t.id} track={t} className="w-52 shrink-0 snap-start sm:w-56" />
+          <TrackTile key={t.id} track={t} className="w-52 shrink-0 snap-start sm:w-56" queue={tracks} />
         ))}
       </div>
     </section>

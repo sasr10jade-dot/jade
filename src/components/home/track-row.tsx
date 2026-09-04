@@ -70,6 +70,8 @@ export function TrackRow({
     pausedRef.current = false;
   };
 
+  const withGuideCount = tracks.map((t) => ({ ...t, guideCount: t._count.guides }));
+
   return (
     <section className="mx-auto max-w-6xl px-5 py-10">
       <div className="flex items-center justify-between">
@@ -90,11 +92,12 @@ export function TrackRow({
         onBlur={resume}
         className="mt-4 -mx-5 flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth px-5 pb-2 scrollbar-hide"
       >
-        {tracks.map((t) => (
+        {withGuideCount.map((t) => (
           <TrackTile
             key={t.id}
-            track={{ ...t, guideCount: t._count.guides }}
+            track={t}
             className="w-52 shrink-0 snap-start sm:w-56"
+            queue={withGuideCount}
           />
         ))}
       </div>

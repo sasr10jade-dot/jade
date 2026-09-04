@@ -1,13 +1,17 @@
+"use client";
+
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { formatKRW } from "@/lib/format";
 import { displayName } from "@/lib/display-name";
 import { hashSeed, decorativeBars, gradientAngle } from "@/lib/track-visual";
+import { useQueue, type QueueTrack } from "@/components/player/queue-context";
 
 export type TileTrack = {
   id: string;
   title: string;
   thumbnailUrl: string | null;
+  fileUrl: string | null;
   bpm: number | null;
   key: string | null;
   genre: string | null;
@@ -19,10 +23,42 @@ export type TileTrack = {
 
 // Discover 그리드, Home 가로 스크롤 행 양쪽에서 공유하는 트랙 타일 — 폭은 호출부가
 // className으로 결정(가로 스크롤 행에서는 shrink-0 + 고정폭, 그리드에서는 w-full).
-export function TrackTile({ track: t, className = "" }: { track: TileTrack; className?: string }) {
+//
+// 재생 버튼 — queue(같은 목록의 트랙들)를 넘겨주면 해당 목록 순서로 "연속 듣기" 큐를
+// 만들고, 안 넘겨주면 이 트랙 하나만 재생(=큐 길이 1). fileUrl 없는 트랙(음원 미등록)은
+// 버튼을 숨김. 재생 시작 위치는 큐 안에서 이 트랙의 id를 직접 찾아 정하므로(인덱스를
+// 따로 받지 않음) fileUrl 없는 트랙이 필터링되어 순서가 밀려도 항상 정확하다.
+export function TrackTile({
+  track: t,
+  className = "",
+  queue,
+}: {
+  track: TileTrack;
+  className?: string;
+  queue?: TileTrack[];
+}) {
+  const { playQueue } = useQueue();
   const seed = hashSeed(t.id);
   const angle = gradientAngle(seed);
   const bars = decorativeBars(seed, 24);
+
+  function handlePlay(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    const source = queue && queue.length > 0 ? queue : [t];
+    const tracks: QueueTrack[] = source
+      .filter((track): track is TileTrack & { fileUrl: string } => !!track.fileUrl)
+      .map((track) => ({
+        id: track.id,
+        title: track.title,
+        thumbnailUrl: track.thumbnailUrl,
+        fileUrl: track.fileUrl,
+        creatorName: displayName(track.creator),
+      }));
+    if (tracks.length === 0) return;
+    const startIndex = Math.max(0, tracks.findIndex((track) => track.id === t.id));
+    playQueue(tracks, startIndex);
+  }
 
   return (
     <Link
@@ -53,11 +89,24 @@ export function TrackTile({ track: t, className = "" }: { track: TileTrack; clas
           </>
         )}
         <div className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 transition group-hover:opacity-100">
-          <div className="flex size-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg">
-            <svg viewBox="0 0 24 24" fill="currentColor" className="ml-0.5 size-5">
-              <path d="M8 5v14l11-7z" />
-            </svg>
-          </div>
+          {t.fileUrl ? (
+            <button
+              type="button"
+              onClick={handlePlay}
+              aria-label={`${t.title} 재생`}
+              className="flex size-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition hover:scale-105"
+            >
+              <svg viewBox="0 0 24 24" fill="currentColor" className="ml-0.5 size-5">
+                <path d="M8 5v14l11-7z" />
+              </svg>
+            </button>
+          ) : (
+            <div className="flex size-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg">
+              <svg viewBox="0 0 24 24" fill="currentColor" className="ml-0.5 size-5">
+                <path d="M8 5v14l11-7z" />
+              </svg>
+            </div>
+          )}
         </div>
       </div>
 

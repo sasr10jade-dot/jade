@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { audioEngine } from "@/lib/audio-engine";
 import { pingTrackPlay } from "@/lib/waveform";
+import { claimPlayback } from "@/lib/now-playing";
 
 // Howler(html5:true) + 커스텀 rAF 루프 + isPlayingRef 워크어라운드를 대체 — 네이티브
 // <audio> 엘리먼트의 play/pause/timeupdate/ended 이벤트를 그대로 신뢰한다.
@@ -110,6 +111,7 @@ export function useNativeAudioPlayer(urls: string[], trackId?: string) {
     // 기본 재생을 최우선으로 — 이퀄라이저(Web Audio) 연결은 재생이 이미 시작된 뒤에
     // 별도로 시도한다. 이렇게 분리해두면 Web Audio 쪽에서 어떤 문제가 생기더라도
     // (브라우저 정책, 확장 프로그램 등) 기본 <audio> 재생 자체는 절대 막히지 않는다.
+    claimPlayback(pause);
     try {
       await el.play();
     } catch (e) {
@@ -158,6 +160,7 @@ export function useNativeAudioPlayer(urls: string[], trackId?: string) {
     setCurrentTime(resumeAt);
 
     if (wasPlaying) {
+      claimPlayback(pause);
       try {
         await to.play();
       } catch (e) {
