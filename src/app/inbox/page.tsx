@@ -1,6 +1,7 @@
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { expireStalePriceOffers, notifyUpcomingPriceOfferExpirations } from "@/lib/price-offers";
 
 function timeAgo(date: Date) {
   const diffMs = Date.now() - date.getTime();
@@ -12,6 +13,8 @@ function timeAgo(date: Date) {
 }
 
 export default async function InboxPage() {
+  await expireStalePriceOffers();
+  await notifyUpcomingPriceOfferExpirations();
   const session = await auth();
   const notifications = session?.user
     ? await prisma.notification.findMany({

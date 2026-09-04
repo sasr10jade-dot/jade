@@ -49,7 +49,7 @@ export async function POST(
   if (!isCreator && !isBuyer) {
     return NextResponse.json({ error: "이 가격 제안의 당사자가 아닙니다" }, { status: 403 });
   }
-  if (offer.status === "ACCEPTED" || offer.status === "REJECTED" || offer.status === "STALLED") {
+  if (offer.status === "ACCEPTED" || offer.status === "REJECTED" || offer.status === "STALLED" || offer.status === "EXPIRED") {
     return NextResponse.json({ error: "이미 종료된 제안입니다" }, { status: 409 });
   }
   if (offer.lastActorId === session.user.id) {

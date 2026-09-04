@@ -51,6 +51,7 @@ enum OfferStatus {
   ACCEPTED
   REJECTED
   STALLED // 역제안 3회 초과 — Split과 동일하게 관리자 개입
+  EXPIRED // 7일간 응답 없이 방치된 제안
 }
 
 enum OfferAction {
@@ -90,6 +91,7 @@ enum NotificationType {
   COMMISSION_DEADLINE_SOON
   COMMISSION_CANCELLED
   ESCROW_REVIEW_REMINDER
+  OFFER_EXPIRING_SOON
 }
 
 enum CommissionStatus {
@@ -317,6 +319,8 @@ model PriceOffer {
   order        Order?      @relation(fields: [orderId], references: [id])
 
   createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt // 마지막 행위(제안/역제안) 시각 — 7일간 안 움직이면 만료 판단 기준
+  expiryReminderSentAt DateTime? // 만료 임박(24시간 이내) 알림을 이미 보냈는지 — 중복 발송 방지
 
   log PriceOfferLogEntry[]
 

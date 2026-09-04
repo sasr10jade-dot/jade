@@ -12,7 +12,7 @@ type Offer = {
   id: string;
   licenseId: string;
   amount: number;
-  status: "PROPOSED" | "COUNTERED" | "ACCEPTED" | "REJECTED" | "STALLED";
+  status: "PROPOSED" | "COUNTERED" | "ACCEPTED" | "REJECTED" | "STALLED" | "EXPIRED";
   lastActorId: string;
   buyerId: string;
   buyer?: { name: string };
@@ -24,6 +24,7 @@ const STATUS_LABEL: Record<Offer["status"], string> = {
   ACCEPTED: "수락됨",
   REJECTED: "거절됨",
   STALLED: "보류됨 (관리자 개입 필요)",
+  EXPIRED: "만료됨 (7일간 응답 없음)",
 };
 
 const LICENSE_LABEL: Record<License["type"], string> = {

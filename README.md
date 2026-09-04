@@ -416,6 +416,14 @@ http://localhost:3000 에서 확인.
      "❤️ 좋아요 많은 트랙" 가로 스크롤 행이 자동으로 노출(0건일 땐 숨김 — 인기
      크리에이터 랭킹과 동일한 판단).
 
+- [x] 가격 제안(PriceOffer) 만료 처리 — Commission/Order와 달리 무기한 대기 가능했던
+      가격 흥정에도 동일한 lazy 리마인더 패턴 적용. 7일간 응답 없이 방치된 제안은
+      `EXPIRED`로 전환(`expireStalePriceOffers()`), 만료 24시간 전엔 응답할 차례인 쪽
+      (`lastActorId`가 아닌 쪽)에게 1회 알림(`notifyUpcomingPriceOfferExpirations()`,
+      `/inbox` 진입 시 호출 — Offer는 전용 목록 페이지가 없어 가장 자주 방문하는
+      전역 페이지에 걸어둠). `PriceOffer.updatedAt`(`@updatedAt`)을 새로 추가해 "마지막
+      행위 시각" 기준으로 방치 여부를 판단.
+
 ## 테스트 계정 (`npx prisma db seed` 실행 후)
 
 모두 비밀번호 `password1234`:
