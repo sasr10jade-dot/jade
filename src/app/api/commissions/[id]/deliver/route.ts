@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import type { LicenseType } from "@/lib/fee";
 import { createOrderAtPrice } from "@/lib/orders";
+import { generateFallbackThumbnail } from "@/lib/generate-thumbnail";
 
 const DeliverSchema = z.object({
   title: z.string().min(1),
@@ -80,6 +81,12 @@ export async function POST(
       },
       include: { licenses: true },
     });
+
+    if (!track.thumbnailUrl) {
+      const thumbnailUrl = generateFallbackThumbnail(track.id, track.title);
+      await tx.track.update({ where: { id: track.id }, data: { thumbnailUrl } });
+      track.thumbnailUrl = thumbnailUrl;
+    }
 
     const order = await createOrderAtPrice(tx, {
       trackId: track.id,

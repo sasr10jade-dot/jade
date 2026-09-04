@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { generateFallbackThumbnail } from "@/lib/generate-thumbnail";
 
 const CreateTrackSchema = z.object({
   title: z.string().min(1, "제목을 입력해주세요"),
@@ -52,6 +53,12 @@ export async function POST(req: Request) {
       },
     },
   });
+
+  if (!track.thumbnailUrl) {
+    const thumbnailUrl = generateFallbackThumbnail(track.id, track.title);
+    await prisma.track.update({ where: { id: track.id }, data: { thumbnailUrl } });
+    track.thumbnailUrl = thumbnailUrl;
+  }
 
   // 팔로우한 크리에이터의 신곡 알림 — 재방문을 만드는 장치.
   const followers = await prisma.follow.findMany({
