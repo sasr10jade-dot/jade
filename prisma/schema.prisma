@@ -1,0 +1,367 @@
+// VOICEMAP — Prisma schema
+// Modeled on PRD Section 5 (IA / Sitemap — 핵심 객체 모델) and Section 12 (Fee & Payout Structure).
+//
+// Dev DB is SQLite (zero-config, file-based) so `npx prisma migrate dev` works with no
+// external services. Swap `provider` to "postgresql" and set DATABASE_URL to a real
+// Postgres instance before deploying — see README.md.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  CREATOR
+  PERFORMER
+  BUYER
+  ADMIN
+}
+
+enum LicenseType {
+  EXCLUSIVE
+  NON_EXCLUSIVE
+}
+
+enum GuideStatus {
+  PENDING
+  SELECTED
+  REJECTED
+}
+
+enum SplitStatus {
+  PROPOSED
+  COUNTERED
+  AGREED
+  STALLED // FR-04 / EC-05: 역제안 3회 초과
+}
+
+enum SplitAction {
+  PROPOSE
+  COUNTER
+  ACCEPT
+}
+
+enum OfferStatus {
+  PROPOSED
+  COUNTERED
+  ACCEPTED
+  REJECTED
+  STALLED // 역제안 3회 초과 — Split과 동일하게 관리자 개입
+}
+
+enum OfferAction {
+  PROPOSE
+  COUNTER
+  ACCEPT
+  REJECT
+}
+
+enum OrderStatus {
+  ESCROW // 에스크로 보관 중 (구매 후 7일)
+  SETTLED
+  DISPUTED
+  REFUNDED_FULL // 원본 미다운로드 환불 100%
+  REFUNDED_PARTIAL // 다운로드 후 환불 50%
+}
+
+enum NotificationType {
+  GUIDE_SUBMITTED
+  SPLIT_PROPOSED
+  SPLIT_COUNTERED
+  SPLIT_AGREED
+  TRACK_INQUIRY
+  SETTLEMENT_UPCOMING
+  OFFER_PROPOSED
+  OFFER_COUNTERED
+  OFFER_ACCEPTED
+  OFFER_REJECTED
+  REVIEW_RECEIVED
+  NEW_TRACK_FROM_FOLLOWED
+  ORDER_DISPUTED
+  ORDER_DISPUTE_RESOLVED
+}
+
+// VOICE Cash — 폐쇄형 포인트, 1 Cash = 1원, 플랫폼 안에서만 사용 (외부 이전/거래 불가).
+// 절대 "코인"/"화폐"라고 부르지 않음 — 법적으로 선불전자지급수단/가상자산 소지가 있어
+// UI·코드 전반에서 "캐시"/"포인트"로만 지칭한다.
+enum CashTransactionType {
+  TOPUP // 원화 결제 → Cash 충전 (구매 시 부족분 자동충전 포함)
+  PURCHASE // 트랙 구매로 인한 차감 (buyer, 에스크로로 이동)
+  ESCROW_RELEASE // 구매 승인/7일 자동승인 시 판매자(Creator/Performer)에게 지분율대로 적립
+  SETTLEMENT_PAYOUT // 정산 신청 승인으로 인한 차감 (원화 출금 처리)
+  REFUND // 주문 환불로 인한 구매자 복구
+}
+
+model CashTransaction {
+  id           String              @id @default(cuid())
+  userId       String
+  user         User                @relation(fields: [userId], references: [id])
+  type         CashTransactionType
+  amount       Int // 부호 있음: 적립 +, 차감 -
+  balanceAfter Int // 트랜잭션 직후 잔액 스냅샷 (감사 추적용)
+  orderId      String?
+  order        Order?              @relation(fields: [orderId], references: [id])
+  memo         String?
+  createdAt    DateTime            @default(now())
+}
+
+enum SettlementRequestStatus {
+  PENDING
+  PAID
+}
+
+// 판매자(Creator/Performer)의 "정산 신청" — 관리자가 주기적으로 원화 송금 처리(수동/오프라인).
+model SettlementRequest {
+  id            String                  @id @default(cuid())
+  userId        String
+  user          User                    @relation(fields: [userId], references: [id])
+  amount        Int // 신청 금액 (Cash, = 원화)
+  withholding   Int // 사업소득 3.3% 원천징수액
+  payoutAmount  Int // amount - withholding, 실제 지급액
+  status        SettlementRequestStatus @default(PENDING)
+  requestedAt   DateTime                @default(now())
+  paidAt        DateTime?
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  nickname     String? // 작성자 공개 표시 이름 후보 — displayNickname이 true일 때 name 대신 노출
+  displayNickname Boolean @default(false)
+  passwordHash String
+  role         Role
+  suspended    Boolean  @default(false) // Admin panel — 계정 정지, login blocked while true
+  createdAt    DateTime @default(now())
+
+  // VOICE Cash 지갑 — 1 Cash = 1원, 폐쇄형 포인트(외부 이전/거래 불가).
+  cashBalance  Int      @default(0)
+  kycVerified  Boolean  @default(false) // 정산 신청 전 필요. 실제 신분증 수집은 앱 밖에서 처리하고
+                                          // 관리자가 확인 후 이 플래그만 토글 (민감정보 수집 안 함).
+
+  // seed creator promo (Section 12 — 시드 크리에이터 프로모션, 10%)
+  isSeedCreator   Boolean   @default(false)
+  seedPromoUntil  DateTime?
+
+  tracksCreated   Track[]         @relation("CreatorTracks")
+  guidesSubmitted Guide[]         @relation("PerformerGuides")
+  ordersBought    Order[]         @relation("BuyerOrders")
+  splitsAsPerformer Split[]       @relation("PerformerSplits")
+  splitsAsLastActor Split[]       @relation("SplitLastActor")
+  splitLogEntries SplitLogEntry[]
+  notifications   Notification[]
+  sentNotifications Notification[] @relation("NotificationFrom")
+  cashTransactions CashTransaction[]
+  settlementRequests SettlementRequest[]
+  offersAsBuyer     PriceOffer[]         @relation("BuyerOffers")
+  offersAsLastActor PriceOffer[]         @relation("OfferLastActor")
+  priceOfferLogEntries PriceOfferLogEntry[]
+  reviewsWritten    Review[]             @relation("ReviewAuthor")
+  reviewsReceived   Review[]             @relation("ReviewTarget")
+  following         Follow[]             @relation("Following")
+  followers         Follow[]             @relation("Followers")
+}
+
+model Track {
+  id        String   @id @default(cuid())
+  title     String
+  bpm       Int?
+  bpmAuto   Boolean  @default(true) // false = 수동 입력 (FR-01 / EC-02)
+  key       String?
+  keyAuto   Boolean  @default(true)
+  genre     String?
+  mood      String?
+  tags      String? // comma-separated for MVP; move to join table post-MVP
+  lyrics    String?
+  fileUrl   String?
+  fileSize  Int? // bytes, guarded against 300MB (FR-01 / EC-01)
+  thumbnailUrl String? // 커버 이미지 (선택) — 없으면 Discover에서 장식용 그라데이션으로 대체
+  status    String   @default("DRAFT") // DRAFT | MATCHING | GUIDE_READY | SPLIT_AGREED | LISTED
+  removedByAdmin Boolean @default(false) // Admin panel 트랙 모더레이션 — true면 Discover/구매에서 숨김
+  playCount Int      @default(0) // Discover 인기순 정렬 — 재생 시작마다 증가 (POST /api/tracks/[id]/play)
+  createdAt DateTime @default(now())
+
+  creatorId String
+  creator   User   @relation("CreatorTracks", fields: [creatorId], references: [id])
+
+  guides    Guide[]
+  split     Split?
+  licenses  License[]
+  orders    Order[]
+  offers    PriceOffer[]
+  reviews   Review[]
+}
+
+model Guide {
+  id         String      @id @default(cuid())
+  trackId    String
+  track      Track       @relation(fields: [trackId], references: [id])
+  performerId String
+  performer  User        @relation("PerformerGuides", fields: [performerId], references: [id])
+  audioUrl   String
+  splitAsk   Float // performer's proposed share, e.g. 20 = 20%
+  status     GuideStatus @default(PENDING)
+  createdAt  DateTime    @default(now())
+
+  @@unique([trackId, performerId]) // EC-04: 가이드 중복 제출 방지
+}
+
+model Split {
+  id             String      @id @default(cuid())
+  trackId        String      @unique
+  track          Track       @relation(fields: [trackId], references: [id])
+  performerId    String // the Guide.performer this split negotiates with
+  performer      User        @relation("PerformerSplits", fields: [performerId], references: [id])
+  creatorShare   Float       @default(80) // Section 5: default 80/20
+  performerShare Float       @default(20)
+  status         SplitStatus @default(PROPOSED)
+  counterCount   Int         @default(0) // EC-05: 3회 초과 시 STALLED
+  // Whoever acted last — who must NOT act next (FR-04 turn-taking). Tracked directly
+  // rather than derived from `log` ordered by createdAt: SQLite/Prisma createMany batches
+  // (and same-millisecond individual writes) can tie, making ORDER BY createdAt DESC
+  // LIMIT 1 non-deterministic and letting one side act twice in a row.
+  lastActorId    String
+  lastActor      User        @relation("SplitLastActor", fields: [lastActorId], references: [id])
+  agreedAt       DateTime?
+  createdAt      DateTime    @default(now())
+
+  log SplitLogEntry[]
+}
+
+model SplitLogEntry {
+  id             String      @id @default(cuid())
+  splitId        String
+  split          Split       @relation(fields: [splitId], references: [id])
+  actorId        String
+  actor          User        @relation(fields: [actorId], references: [id])
+  action         SplitAction
+  creatorShare   Float
+  performerShare Float
+  createdAt      DateTime    @default(now())
+}
+
+model License {
+  id        String      @id @default(cuid())
+  trackId   String
+  track     Track       @relation(fields: [trackId], references: [id])
+  type      LicenseType
+  price     Int // KRW, integer won
+  createdAt DateTime    @default(now())
+
+  orders Order[]
+  offers PriceOffer[]
+}
+
+// 구매자 ↔ 크리에이터 가격 흥정 — Split 협의(제안/역제안/수락, 3회 초과 시 관리자 개입)와
+// 동일한 패턴. 수락되면 그 즉시 negotiated amount로 Order를 생성(에스크로 진입)한다.
+model PriceOffer {
+  id           String      @id @default(cuid())
+  trackId      String
+  track        Track       @relation(fields: [trackId], references: [id])
+  licenseId    String
+  license      License     @relation(fields: [licenseId], references: [id])
+  buyerId      String
+  buyer        User        @relation("BuyerOffers", fields: [buyerId], references: [id])
+
+  amount       Int // 현재 제안 금액, KRW
+  status       OfferStatus @default(PROPOSED)
+  counterCount Int         @default(0)
+  // Split과 동일한 이유로 마지막 행위자를 직접 저장 (createdAt 정렬은 SQLite 배치 타임스탬프
+  // 동률 문제로 비결정적) — 마지막으로 액션한 쪽은 다시 액션할 수 없음(턴제 강제).
+  lastActorId  String
+  lastActor    User        @relation("OfferLastActor", fields: [lastActorId], references: [id])
+
+  orderId      String?     @unique // 수락 시 생성된 Order로 연결
+  order        Order?      @relation(fields: [orderId], references: [id])
+
+  createdAt    DateTime    @default(now())
+
+  log PriceOfferLogEntry[]
+
+  @@unique([trackId, licenseId, buyerId])
+}
+
+model PriceOfferLogEntry {
+  id        String      @id @default(cuid())
+  offerId   String
+  offer     PriceOffer  @relation(fields: [offerId], references: [id])
+  actorId   String
+  actor     User        @relation(fields: [actorId], references: [id])
+  action    OfferAction
+  amount    Int
+  createdAt DateTime    @default(now())
+}
+
+// Fee & Payout — Section 12. Rate resolved at purchase time by lib/fee.ts,
+// snapshotted onto the Order so historical orders are immutable to later rate changes.
+model Order {
+  id           String      @id @default(cuid())
+  trackId      String
+  track        Track       @relation(fields: [trackId], references: [id])
+  licenseId    String
+  license      License     @relation(fields: [licenseId], references: [id])
+  buyerId      String
+  buyer        User        @relation("BuyerOrders", fields: [buyerId], references: [id])
+
+  amount       Int // 정가, KRW
+  feeRate      Float // snapshot, e.g. 0.20
+  feeAmount    Int
+  netAmount    Int // amount - feeAmount, distributed per Split at settlement
+  status       OrderStatus @default(ESCROW)
+  downloaded   Boolean     @default(false) // lib/fee.ts calculateRefund() 환불율 분기 기준
+  disputeReason String? // 구매자가 이의 제기 시 남긴 사유 (ESCROW 상태일 때만 제기 가능)
+  disputedAt   DateTime?
+
+  purchasedAt  DateTime    @default(now())
+  escrowEndsAt DateTime? // purchasedAt + 7 days (Section 7 / Section 12)
+  settledAt    DateTime?
+
+  cashTransactions CashTransaction[]
+  priceOffer   PriceOffer?
+  review       Review?
+}
+
+// 구매 완료(SETTLED) 후 구매자가 남기는 평점/후기 — 처음 보는 크리에이터를 신뢰할 근거가
+// "시드 크리에이터" 뱃지뿐이었던 걸 보완. 주문 1건당 리뷰 1개(@@unique orderId).
+model Review {
+  id        String   @id @default(cuid())
+  orderId   String   @unique
+  order     Order    @relation(fields: [orderId], references: [id])
+  trackId   String
+  track     Track    @relation(fields: [trackId], references: [id])
+  authorId  String
+  author    User     @relation("ReviewAuthor", fields: [authorId], references: [id])
+  targetId  String // 리뷰 대상 크리에이터 (구매 시점 track.creatorId)
+  target    User     @relation("ReviewTarget", fields: [targetId], references: [id])
+  rating    Int // 1-5
+  comment   String?
+  createdAt DateTime @default(now())
+}
+
+// 팔로우 — 재방문을 만드는 장치: 팔로우한 크리에이터가 신곡을 올리면 알림 + 홈 피드에 노출.
+model Follow {
+  id          String   @id @default(cuid())
+  followerId  String
+  follower    User     @relation("Following", fields: [followerId], references: [id])
+  followingId String
+  following   User     @relation("Followers", fields: [followingId], references: [id])
+  createdAt   DateTime @default(now())
+
+  @@unique([followerId, followingId])
+}
+
+model Notification {
+  id         String            @id @default(cuid())
+  userId     String
+  user       User              @relation(fields: [userId], references: [id])
+  fromUserId String?
+  fromUser   User?             @relation("NotificationFrom", fields: [fromUserId], references: [id])
+  type       NotificationType
+  message    String
+  read       Boolean           @default(false)
+  createdAt  DateTime          @default(now())
+}
