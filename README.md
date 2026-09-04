@@ -52,6 +52,10 @@ http://localhost:3000 에서 확인.
 | `/wallet` | VOICE Cash 지갑 (충전/정산신청/거래내역) | Section 12 |
 | `/settings/account` | 회원정보 수정 (이름/닉네임/공개표시/이메일) | — |
 | `/studio/[id]/edit` | 트랙 수정 (음원/제목/장르/BPM/가사/썸네일) | — |
+| `/search` | 트랙/크리에이터 통합 검색 | — |
+| `/commissions` | 곡 의뢰 목록 (지원 가능한 의뢰 / 내가 등록한 의뢰) | — |
+| `/commissions/new` | 곡 의뢰 등록 | — |
+| `/commissions/[id]` | 의뢰 상세 · 지원 · 선정 · 납품 | — |
 
 모든 페이지가 Prisma로 실제 DB를 조회합니다 (`prisma/seed.ts`로 채운 데모 데이터 기준).
 
@@ -328,6 +332,45 @@ http://localhost:3000 에서 확인.
      기존 프리사인 업로드 파이프라인 그대로 재사용해 제출. 녹음 장비·편집 경험이 없는
      아마추어의 진입장벽을 낮추는 게 목적이라 `lib/storage.ts`의 `ALLOWED_CONTENT_TYPES`에
      webm/mp4/ogg를 추가(기존 WAV/MP3 정책은 유지, 확장만).
+
+- [x] 구매자 이의 제기(dispute) — 에스크로(`ESCROW`) 상태인 주문에 한해 구매자가 사유를
+      남기고 이의를 제기할 수 있음(`POST /api/orders/[id]/dispute`, `/orders`의 "이의 제기"
+      버튼). 관리자는 `/admin/disputes`에서 사유를 확인하고 정산 진행(SETTLE) 또는 환불
+      (REFUND) 처리. **이 작업 중 기존 환불 로직의 실제 버그를 발견해 함께 고침** —
+      `/api/admin/orders/[id]/resolve`의 REFUND 분기가 `calculateRefund()`로 환불액을
+      계산해 응답에는 포함시키면서도 실제로는 구매자 VOICE Cash 잔액에 `creditCash()`를
+      호출하지 않아, 주문 상태만 REFUNDED로 바뀌고 돈은 돌려주지 않는 상태였음.
+- [x] 안읽은 알림 뱃지 — 헤더의 Inbox 메뉴에 안읽은 알림 수 뱃지(`SiteHeader`,
+      `prisma.notification.count({ read: false })`). `/inbox` 진입 시 조회한 스냅샷으로
+      먼저 렌더링한 뒤 DB에서 읽음 처리해, 뱃지가 사라지는 타이밍과 목록에 표시되는
+      안읽음 점(`•`)이 어긋나지 않게 함.
+- [x] 홈 화면 가로 스크롤 자동 재생 — "💚 팔로우 중인 신곡"/"🔥 인기 급상승"/"🆕 신규
+      업로드" 세 행이 3.2초마다 한 칸씩 자동으로 넘어가고(`src/components/home/track-row.tsx`),
+      끝에 닿으면 처음(또는 반대쪽)으로 부드럽게 복귀. 위아래 행이 서로 반대 방향으로
+      흐르도록 `reverse` prop으로 교차 배치. hover/touch/focus 중에는 멈춰서 직접
+      넘겨보는 걸 방해하지 않고, `prefers-reduced-motion`이 켜져 있으면 자동 재생 자체를
+      비활성화.
+- [x] 좋아요(Like) — 트랙 상세 페이지의 하트 버튼으로 좋아요/취소 토글
+      (`Like` 모델, `POST /api/likes`, `DELETE /api/likes/[trackId]`). 로그인 사용자만
+      노출.
+- [x] 썸네일 자동 생성 — 썸네일이 없던 기존 트랙 90개에 카드 UI의 그라데이션+웨이브 바
+      폴백과 동일한 스타일의 SVG 썸네일을 일괄 생성해 등록(`scripts/generate-thumbnails.ts`,
+      트랙 id 기반 결정론적 해시로 매번 같은 비주얼 재현). CSS 커스텀 프로퍼티는 `<img>`로
+      로드되는 별도 SVG 문서에 상속되지 않으므로 테마 색상(`--accent`/`--secondary`/
+      `--primary`)을 하드코딩.
+- [x] 곡 의뢰(Commission) — 기존 흐름(크리에이터가 곡을 먼저 올리고 구매자가 찾아서
+      구매)과 반대로, 구매자가 원하는 조건(장르/무드/예산/마감일/레퍼런스)을 먼저 올리면
+      크리에이터들이 가격+메시지로 지원하는 역방향 매칭(`CommissionRequest`/
+      `CommissionOffer` 모델, `/commissions`).
+  - 구매자가 지원 중 하나를 선정(`POST /api/commissions/[id]/select`)하면 의뢰는
+    `MATCHED`로 전환되고, 선정된 크리에이터에게만 납품 권한이 생김. 나머지 지원은 자동
+    `REJECTED` + 낙선 알림.
+  - 선정된 크리에이터가 곡을 업로드해 납품(`POST /api/commissions/[id]/deliver`)하면
+    그 즉시 합의된 가격으로 `License` + `Order`가 자동 생성되어 **기존 에스크로/수수료/
+    자동충전 로직(`createOrderAtPrice`)을 그대로 재사용** — 별도의 결제 파이프라인을
+    새로 만들지 않음.
+  - 마감일이 지난 `OPEN` 의뢰는 목록 페이지 진입 시 lazy하게 `EXPIRED`로 전환
+    (`settleExpiredEscrows()`와 동일한 패턴, `src/lib/commissions.ts`).
 
 ## 테스트 계정 (`npx prisma db seed` 실행 후)
 

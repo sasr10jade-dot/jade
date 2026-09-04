@@ -8,6 +8,7 @@ import { TrackPlayer } from "@/components/player/track-player";
 import { GuideSubmitForm } from "./guide-submit-form";
 import { SplitProposeForm } from "./split-propose-form";
 import { PriceOfferSection } from "./price-offer-section";
+import { LikeButton } from "./like-button";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { formatKRW } from "@/lib/format";
@@ -35,10 +36,20 @@ export default async function TrackDetailPage({
           orderBy: { createdAt: "desc" },
           include: { author: { select: { name: true, nickname: true, displayNickname: true } } },
         },
+        _count: { select: { likes: true } },
       },
     }),
   ]);
   if (!track) notFound();
+
+  const likedByMe = session?.user
+    ? Boolean(
+        await prisma.like.findUnique({
+          where: { userId_trackId: { userId: session.user.id, trackId: track.id } },
+          select: { id: true },
+        })
+      )
+    : false;
 
   const avgRating = track.reviews.length
     ? track.reviews.reduce((sum, r) => sum + r.rating, 0) / track.reviews.length
@@ -95,9 +106,14 @@ export default async function TrackDetailPage({
             )}
           </div>
         </div>
-        <Link href={`/checkout/${track.id}`}>
-          <Button>구매하기 →</Button>
-        </Link>
+        <div className="flex shrink-0 items-center gap-2">
+          {session?.user && (
+            <LikeButton trackId={track.id} initialLiked={likedByMe} initialCount={track._count.likes} />
+          )}
+          <Link href={`/checkout/${track.id}`}>
+            <Button>구매하기 →</Button>
+          </Link>
+        </div>
       </div>
 
       <div className="mt-4 flex gap-3">

@@ -10,6 +10,7 @@ import { formatKRW } from "@/lib/format";
 
 const NAV = [
   { href: "/discover", label: "Discover" },
+  { href: "/commissions", label: "곡 의뢰" },
   { href: "/matching", label: "가이드 모집" },
   { href: "/upload", label: "업로드" },
   { href: "/studio", label: "Studio" },

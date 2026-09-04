@@ -1,18 +1,11 @@
 import Link from "next/link";
-import type { Track, License, User } from "@prisma/client";
 import { Button } from "@/components/ui/button";
-import { TrackTile } from "@/components/track-tile";
+import { TrackRow } from "@/components/home/track-row";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { formatKRW } from "@/lib/format";
 import { displayName } from "@/lib/display-name";
 import { hashSeed, decorativeBars, gradientAngle } from "@/lib/track-visual";
-
-type HomeTrack = Track & {
-  licenses: License[];
-  _count: { guides: number };
-  creator: Pick<User, "name" | "nickname" | "displayNickname">;
-};
 
 const TRACK_SELECT = {
   licenses: { where: { type: "EXCLUSIVE" as const } },
@@ -125,44 +118,14 @@ export default async function Home() {
       </section>
 
       {followedTracks.length > 0 && (
-        <TrackRow title="💚 팔로우 중인 크리에이터의 신곡" tracks={followedTracks} viewAllHref="/discover" />
+        <TrackRow title="💚 팔로우 중인 크리에이터의 신곡" tracks={followedTracks} viewAllHref="/discover" reverse={false} />
       )}
       {popular.length > 0 && (
-        <TrackRow title="🔥 인기 급상승" tracks={popular} viewAllHref="/discover" />
+        <TrackRow title="🔥 인기 급상승" tracks={popular} viewAllHref="/discover" reverse={true} />
       )}
       {newest.length > 0 && (
-        <TrackRow title="🆕 신규 업로드" tracks={newest} viewAllHref="/discover" />
+        <TrackRow title="🆕 신규 업로드" tracks={newest} viewAllHref="/discover" reverse={false} />
       )}
     </div>
-  );
-}
-
-function TrackRow({
-  title,
-  tracks,
-  viewAllHref,
-}: {
-  title: string;
-  tracks: HomeTrack[];
-  viewAllHref: string;
-}) {
-  return (
-    <section className="mx-auto max-w-6xl px-5 py-10">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold tracking-tight">{title}</h2>
-        <Link href={viewAllHref} className="text-sm text-muted-foreground hover:text-foreground hover:underline">
-          전체보기 →
-        </Link>
-      </div>
-      <div className="mt-4 -mx-5 flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth px-5 pb-2 scrollbar-hide">
-        {tracks.map((t) => (
-          <TrackTile
-            key={t.id}
-            track={{ ...t, guideCount: t._count.guides }}
-            className="w-52 shrink-0 snap-start sm:w-56"
-          />
-        ))}
-      </div>
-    </section>
   );
 }
