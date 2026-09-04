@@ -7,6 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { prisma } from "@/lib/prisma";
 import { formatKRW } from "@/lib/format";
+import { DEMO_ACCOUNTS } from "@/lib/demo-accounts";
+
+const IS_DEV = process.env.NODE_ENV !== "production";
 
 const NAV = [
   { href: "/discover", label: "Discover" },
@@ -133,6 +136,20 @@ export async function SiteHeader() {
               <EqualizerButton />
               {userBlock}
             </div>
+            {IS_DEV && !session?.user && (
+              <div className="mt-3 border-t pt-3">
+                <p className="text-xs font-semibold text-muted-foreground">빠른 로그인 (개발용)</p>
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  {DEMO_ACCOUNTS.map((acc) => (
+                    <Link key={acc.email} href={`/login?email=${encodeURIComponent(acc.email)}`}>
+                      <Button type="button" variant="outline" size="sm" className="w-full">
+                        {`${acc.label} (${acc.role})`}
+                      </Button>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
           </MobileMenu>
         </div>
       </div>
