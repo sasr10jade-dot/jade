@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { ThumbnailUploader } from "@/components/thumbnail-uploader";
+import { SheetMusicUploader } from "@/components/sheet-music-uploader";
 
 const SUGGESTED_TAGS = ["발라드", "무드: 잔잔한", "여성보컬 추천"];
 const MAX_SIZE_MB = 300;
@@ -27,6 +28,7 @@ export function UploadForm() {
   const [exclusivePrice, setExclusivePrice] = useState("300000");
   const [nonExclusivePrice, setNonExclusivePrice] = useState("120000");
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
+  const [sheetMusicUrl, setSheetMusicUrl] = useState<string | null>(null);
   const [state, setState] = useState<UploadState>("idle");
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -92,6 +94,7 @@ export function UploadForm() {
           fileUrl,
           fileSize: file.size,
           thumbnailUrl: thumbnailUrl ?? undefined,
+          sheetMusicUrl: sheetMusicUrl ?? undefined,
           exclusivePrice: exclusiveNum,
           nonExclusivePrice: nonExclusiveNum,
         }),
@@ -151,6 +154,16 @@ export function UploadForm() {
         <Label>커버 썸네일 (선택)</Label>
         <div className="mt-1.5">
           <ThumbnailUploader onUploaded={setThumbnailUrl} />
+        </div>
+      </div>
+
+      <div className="mt-6">
+        <Label>악보 (선택)</Label>
+        <p className="mt-1 text-xs text-muted-foreground">
+          가이드 제출을 검토하는 Performer가 참고할 수 있게 트랙 상세 페이지에 공개됩니다.
+        </p>
+        <div className="mt-1.5">
+          <SheetMusicUploader onUploaded={setSheetMusicUrl} />
         </div>
       </div>
 

@@ -40,7 +40,7 @@ export interface PresignedUpload {
 export async function createPresignedUpload(
   originalName: string,
   contentType: string,
-  folder: "tracks" | "guides" | "thumbnails" = "tracks"
+  folder: "tracks" | "guides" | "thumbnails" | "sheet-music" = "tracks"
 ): Promise<PresignedUpload> {
   const ext = originalName.includes(".") ? originalName.split(".").pop() : "bin";
   const key = `${folder}/${randomUUID()}.${ext}`;
@@ -80,3 +80,7 @@ export const ALLOWED_CONTENT_TYPES = [
 // 트랙 커버 썸네일 — 오디오보다 훨씬 작은 별도 한도/포맷.
 export const MAX_THUMBNAIL_BYTES = 5 * 1024 * 1024;
 export const ALLOWED_THUMBNAIL_TYPES = ["image/jpeg", "image/png", "image/webp"];
+
+// 악보 — PDF(악보 편집기 export) 또는 스캔 이미지.
+export const MAX_SHEET_MUSIC_BYTES = 20 * 1024 * 1024;
+export const ALLOWED_SHEET_MUSIC_TYPES = ["application/pdf", "image/jpeg", "image/png"];

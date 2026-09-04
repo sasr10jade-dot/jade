@@ -424,6 +424,12 @@ http://localhost:3000 에서 확인.
       전역 페이지에 걸어둠). `PriceOffer.updatedAt`(`@updatedAt`)을 새로 추가해 "마지막
       행위 시각" 기준으로 방치 여부를 판단.
 
+- [x] 악보(sheet music) 등록/수정 — `Track.sheetMusicUrl`(PDF/JPEG/PNG, 최대 20MB).
+      `/upload`(신규)·`/studio/[id]/edit`(수정) 양쪽에 업로드 UI 추가
+      (`src/components/sheet-music-uploader.tsx` — 이미지 미리보기 대신 파일명+링크로
+      표시, PDF도 다룰 수 있도록). 트랙 상세 페이지에서 가사와 동일하게 구매 전에도
+      공개 — 가이드 제출을 검토하는 Performer가 참고할 수 있도록.
+
 ## 테스트 계정 (`npx prisma db seed` 실행 후)
 
 모두 비밀번호 `password1234`:

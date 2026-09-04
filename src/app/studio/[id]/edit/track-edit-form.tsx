@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ThumbnailUploader } from "@/components/thumbnail-uploader";
+import { SheetMusicUploader } from "@/components/sheet-music-uploader";
 
 const MAX_SIZE_MB = 300;
 const ALLOWED_TYPES = ["audio/wav", "audio/x-wav", "audio/mpeg"];
@@ -25,6 +26,7 @@ export function TrackEditForm({ track }: { track: Track & { licenses: License[] 
     track.licenses.find((l) => l.type === "NON_EXCLUSIVE")?.price.toString() ?? ""
   );
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(track.thumbnailUrl);
+  const [sheetMusicUrl, setSheetMusicUrl] = useState<string | null>(track.sheetMusicUrl);
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [audioError, setAudioError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -57,6 +59,7 @@ export function TrackEditForm({ track }: { track: Track & { licenses: License[] 
         bpm: bpm ? Number(bpm) : undefined,
         lyrics: lyrics || undefined,
         thumbnailUrl: thumbnailUrl ?? undefined,
+        sheetMusicUrl,
         exclusivePrice: exclusivePrice ? Number(exclusivePrice) : undefined,
         nonExclusivePrice: nonExclusivePrice ? Number(nonExclusivePrice) : undefined,
       };
@@ -105,6 +108,13 @@ export function TrackEditForm({ track }: { track: Track & { licenses: License[] 
       <Label>커버 썸네일</Label>
       <div className="mt-1.5">
         <ThumbnailUploader onUploaded={setThumbnailUrl} initialUrl={thumbnailUrl} />
+      </div>
+
+      <div className="mt-6">
+        <Label>악보 (선택)</Label>
+        <div className="mt-1.5">
+          <SheetMusicUploader onUploaded={setSheetMusicUrl} initialUrl={sheetMusicUrl} />
+        </div>
       </div>
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2">

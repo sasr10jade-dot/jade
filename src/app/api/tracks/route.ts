@@ -16,6 +16,7 @@ const CreateTrackSchema = z.object({
   fileUrl: z.string().min(1),
   fileSize: z.number().int().positive(),
   thumbnailUrl: z.string().optional(),
+  sheetMusicUrl: z.string().optional(),
   exclusivePrice: z.number().int().positive(),
   nonExclusivePrice: z.number().int().positive(),
 });

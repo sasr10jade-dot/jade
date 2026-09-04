@@ -177,6 +177,20 @@ export default async function TrackDetailPage({
         </>
       )}
 
+      {track.sheetMusicUrl && (
+        <>
+          <h2 className="mt-10 text-lg font-semibold">악보</h2>
+          <a
+            href={track.sheetMusicUrl}
+            target="_blank"
+            rel="noreferrer noopener"
+            className="mt-4 inline-flex items-center gap-2 rounded-lg border p-3 text-sm text-primary hover:underline"
+          >
+            악보 보기 →
+          </a>
+        </>
+      )}
+
       <h2 className="mt-10 text-lg font-semibold">가이드 비교</h2>
       <p className="text-sm text-muted-foreground">
         동일 구간 A/B 전환, 파형 표시 — 구매 전 전곡 청취 가능

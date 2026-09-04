@@ -11,6 +11,7 @@ const UpdateTrackSchema = z.object({
   bpm: z.number().int().positive().optional(),
   lyrics: z.string().optional(),
   thumbnailUrl: z.string().min(1).optional(),
+  sheetMusicUrl: z.string().min(1).nullable().optional(),
   fileUrl: z.string().min(1).optional(),
   fileSize: z.number().int().positive().optional(),
   exclusivePrice: z.number().int().positive().optional(),

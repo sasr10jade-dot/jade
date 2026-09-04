@@ -206,6 +206,7 @@ model Track {
   fileUrl   String?
   fileSize  Int? // bytes, guarded against 300MB (FR-01 / EC-01)
   thumbnailUrl String? // 커버 이미지 (선택) — 없으면 Discover에서 장식용 그라데이션으로 대체
+  sheetMusicUrl String? // 악보 파일 (PDF/이미지, 선택) — Performer가 가이드 제출 전 참고 가능
   status    String   @default("DRAFT") // DRAFT | MATCHING | GUIDE_READY | SPLIT_AGREED | LISTED
   removedByAdmin Boolean @default(false) // Admin panel 트랙 모더레이션 — true면 Discover/구매에서 숨김
   playCount Int      @default(0) // Discover 인기순 정렬 — 재생 시작마다 증가 (POST /api/tracks/[id]/play)
