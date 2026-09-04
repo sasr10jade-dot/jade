@@ -44,7 +44,7 @@ export async function SiteHeader() {
         <Link
           key={item.href}
           href={item.href}
-          className="relative rounded-md px-3 py-2 text-muted-foreground transition hover:bg-muted hover:text-foreground"
+          className="relative shrink-0 rounded-md px-2.5 py-2 whitespace-nowrap text-muted-foreground transition hover:bg-muted hover:text-foreground"
         >
           {item.label}
           {item.href === "/inbox" && unreadCount > 0 && (
@@ -57,7 +57,7 @@ export async function SiteHeader() {
       {session?.user?.role === "ADMIN" && (
         <Link
           href="/admin"
-          className="rounded-md px-3 py-2 text-muted-foreground transition hover:bg-muted hover:text-foreground"
+          className="shrink-0 rounded-md px-2.5 py-2 whitespace-nowrap text-muted-foreground transition hover:bg-muted hover:text-foreground"
         >
           관리자
         </Link>
@@ -101,9 +101,9 @@ export async function SiteHeader() {
           <span className="hidden text-[15px] font-bold tracking-tight sm:inline">VOICEMAP</span>
         </Link>
 
-        <nav className="hidden items-center gap-1 text-sm md:flex">{navLinks}</nav>
+        <nav className="hidden min-w-0 items-center gap-0.5 text-sm md:flex">{navLinks}</nav>
 
-        <form action="/search" method="GET" className="hidden max-w-xs flex-1 md:block">
+        <form action="/search" method="GET" className="hidden max-w-xs flex-1 lg:block">
           <input
             type="search"
             name="q"
@@ -116,7 +116,7 @@ export async function SiteHeader() {
           <Link
             href="/search"
             aria-label="검색"
-            className="rounded-md p-2 text-muted-foreground transition hover:bg-muted hover:text-foreground md:hidden"
+            className="rounded-md p-2 text-muted-foreground transition hover:bg-muted hover:text-foreground lg:hidden"
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="size-5">
               <circle cx="11" cy="11" r="7" />

@@ -5,11 +5,19 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { formatKRW } from "@/lib/format";
 import { displayName } from "@/lib/display-name";
-import { expireOverdueCommissions } from "@/lib/commissions";
+import { expireOverdueCommissions, notifyUpcomingCommissionDeadlines } from "@/lib/commissions";
 
 const LICENSE_LABEL: Record<string, string> = {
   EXCLUSIVE: "Exclusive",
   NON_EXCLUSIVE: "Non-Exclusive",
+};
+
+const STATUS_LABEL: Record<string, string> = {
+  OPEN: "지원 모집 중",
+  MATCHED: "매칭됨",
+  DELIVERED: "납품 완료",
+  CANCELLED: "취소됨",
+  EXPIRED: "마감 지남",
 };
 
 function daysLeft(deadline: Date) {
@@ -18,6 +26,7 @@ function daysLeft(deadline: Date) {
 
 export default async function CommissionsPage() {
   await expireOverdueCommissions();
+  await notifyUpcomingCommissionDeadlines();
   const session = await auth();
 
   const [open, mine] = await Promise.all([
@@ -66,7 +75,7 @@ export default async function CommissionsPage() {
               >
                 <span className="font-medium">{r.title}</span>
                 <span className="flex items-center gap-2 text-xs text-muted-foreground">
-                  지원 {r._count.offers}건 <Badge variant="outline">{r.status}</Badge>
+                  지원 {r._count.offers}건 <Badge variant="outline">{STATUS_LABEL[r.status] ?? r.status}</Badge>
                 </span>
               </Link>
             ))}

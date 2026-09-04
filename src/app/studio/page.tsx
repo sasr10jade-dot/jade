@@ -6,8 +6,10 @@ import { prisma } from "@/lib/prisma";
 import { formatKRW } from "@/lib/format";
 import { settleExpiredEscrows } from "@/lib/settlement";
 import { getCreatorStats } from "@/lib/creator-stats";
+import { getPerformerStats } from "@/lib/performer-stats";
 import { StudioTrackThumbnail } from "./track-thumbnail";
 import { StatsSection } from "./stats-section";
+import { PerformerStatsSection } from "./performer-stats-section";
 
 const STATUS_LABEL: Record<string, string> = {
   DRAFT: "가이드 대기중",
@@ -25,10 +27,17 @@ const ORDER_STATUS_LABEL: Record<string, string> = {
   REFUNDED_PARTIAL: "부분 환불",
 };
 
+const GUIDE_STATUS_LABEL: Record<string, string> = {
+  PENDING: "심사중",
+  SELECTED: "채택됨",
+  REJECTED: "미채택",
+};
+
 export default async function StudioPage() {
   const session = await auth();
   await settleExpiredEscrows();
   const isCreator = session?.user?.role === "CREATOR";
+  const isPerformer = session?.user?.role === "PERFORMER";
 
   const tracks = isCreator
     ? await prisma.track.findMany({
@@ -54,25 +63,78 @@ export default async function StudioPage() {
 
   const stats = isCreator ? await getCreatorStats(session!.user.id) : null;
 
+  const myGuides = isPerformer
+    ? await prisma.guide.findMany({
+        where: { performerId: session!.user.id },
+        orderBy: { createdAt: "desc" },
+        include: { track: { select: { id: true, title: true, thumbnailUrl: true } } },
+      })
+    : [];
+  const performerStats = isPerformer ? await getPerformerStats(session!.user.id) : null;
+
   return (
     <div className="mx-auto max-w-3xl px-5 py-10">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Studio</h1>
-          <p className="mt-1 text-sm text-muted-foreground">내 트랙, 가이드 관리</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {isPerformer ? "내 가이드 제출, Split 협상 현황" : "내 트랙, 가이드 관리"}
+          </p>
         </div>
-        <Link href="/upload">
-          <Button>+ 새 트랙 업로드</Button>
-        </Link>
+        {isPerformer ? (
+          <Link href="/matching">
+            <Button>가이드 모집 둘러보기</Button>
+          </Link>
+        ) : (
+          <Link href="/upload">
+            <Button>+ 새 트랙 업로드</Button>
+          </Link>
+        )}
       </div>
 
-      {!isCreator && (
+      {!isCreator && !isPerformer && (
         <p className="mt-4 rounded-lg border-l-2 border-amber-500 bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950/20 dark:text-amber-200">
-          Studio는 Creator 계정 전용 화면입니다. Creator로 가입 후 이용해주세요.
+          Studio는 Creator/Performer 계정 전용 화면입니다. 해당 역할로 가입 후 이용해주세요.
         </p>
       )}
 
       {stats && stats.totalTracks > 0 && <StatsSection {...stats} />}
+      {performerStats && myGuides.length > 0 && <PerformerStatsSection {...performerStats} />}
+
+      {isPerformer && (
+        <>
+          {myGuides.length === 0 ? (
+            <p className="mt-6 text-sm text-muted-foreground">
+              아직 제출한 가이드가 없습니다. 위 버튼으로 트랙을 둘러보고 첫 가이드를 제출해보세요.
+            </p>
+          ) : (
+            <div className="mt-6 space-y-3">
+              {myGuides.map((g) => (
+                <Link
+                  key={g.id}
+                  href={`/track/${g.track.id}`}
+                  className="flex items-center justify-between rounded-lg border p-3 text-sm transition hover:border-primary/50"
+                >
+                  <span className="font-semibold">{g.track.title}</span>
+                  <div className="flex items-center gap-3 text-muted-foreground">
+                    <span>제안 분배율 {Math.round(g.splitAsk)}%</span>
+                    <Badge variant={g.status === "SELECTED" ? "default" : "outline"}>
+                      {GUIDE_STATUS_LABEL[g.status] ?? g.status}
+                    </Badge>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+          <p className="mt-4 text-xs text-muted-foreground">
+            채택된 가이드의 Split 협상 진행 상황은{" "}
+            <Link href="/settings/split" className="underline">
+              Split 에디터
+            </Link>
+            에서 확인하세요.
+          </p>
+        </>
+      )}
 
       {isCreator && tracks.length === 0 && (
         <p className="mt-6 text-sm text-muted-foreground">

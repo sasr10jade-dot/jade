@@ -5,10 +5,11 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { formatKRW } from "@/lib/format";
 import { displayName } from "@/lib/display-name";
-import { expireOverdueCommissions } from "@/lib/commissions";
+import { expireOverdueCommissions, notifyUpcomingCommissionDeadlines } from "@/lib/commissions";
 import { OfferForm } from "./offer-form";
 import { SelectOfferButton } from "./select-offer-button";
 import { DeliverForm } from "./deliver-form";
+import { CancelCommissionButton } from "./cancel-button";
 
 const LICENSE_LABEL: Record<string, string> = {
   EXCLUSIVE: "Exclusive",
@@ -30,6 +31,7 @@ export default async function CommissionDetailPage({
 }) {
   const { id } = await params;
   await expireOverdueCommissions();
+  await notifyUpcomingCommissionDeadlines();
 
   const [session, request] = await Promise.all([
     auth(),
@@ -64,7 +66,10 @@ export default async function CommissionDetailPage({
             {displayName(request.buyer)} · {new Date(request.createdAt).toLocaleDateString("ko-KR")}
           </p>
         </div>
-        <Badge variant="outline">{STATUS_LABEL[request.status]}</Badge>
+        <div className="flex items-center gap-2">
+          <Badge variant="outline">{STATUS_LABEL[request.status]}</Badge>
+          {isBuyer && request.status === "OPEN" && <CancelCommissionButton requestId={request.id} />}
+        </div>
       </div>
 
       <p className="mt-4 whitespace-pre-line text-sm text-muted-foreground">{request.description}</p>

@@ -1,23 +1,7 @@
 import { prisma } from "@/lib/prisma";
+import { lastNDays, dayKey, type DailyPoint } from "@/components/mini-bar-chart";
 
 const TREND_DAYS = 14;
-
-export type DailyPoint = { date: string; value: number };
-
-function dayKey(d: Date) {
-  return d.toISOString().slice(0, 10);
-}
-
-function lastNDays(n: number): string[] {
-  const days: string[] = [];
-  const now = new Date();
-  for (let i = n - 1; i >= 0; i--) {
-    const d = new Date(now);
-    d.setUTCDate(d.getUTCDate() - i);
-    days.push(dayKey(d));
-  }
-  return days;
-}
 
 // Studio 상단 통계 대시보드용 — Track.playCount는 누적값이라 추이를 못 그리므로
 // PlayEvent 로그(최근 14일분만 쌓임, 그 이전은 총계에만 반영)로 일별 재생 추이를 만들고,

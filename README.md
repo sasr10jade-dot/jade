@@ -377,6 +377,29 @@ http://localhost:3000 에서 확인.
   - 마감일이 지난 `OPEN` 의뢰는 목록 페이지 진입 시 lazy하게 `EXPIRED`로 전환
     (`settleExpiredEscrows()`와 동일한 패턴, `src/lib/commissions.ts`).
 
+- [x] 서비스 고도화 2차 (3단계 순차 진행) — Creator 통계 대시보드에 이어 나머지 두
+      역할/화면의 균형을 맞추는 방향.
+  1. **관리자 통계 대시보드**(`/admin`) — 기존 GMV/수수료/에스크로 카드에 역할별 유저
+     분포, 인기 장르 Top 5, 신규가입·GMV 14일 추이 차트 추가. 차트 컴포넌트를
+     `src/components/mini-bar-chart.tsx`로 공유 추출해 Studio(Creator)와 Admin 양쪽이
+     재사용.
+  2. **Performer 대시보드** — Creator 전용이던 Studio(`/studio`)가 이제 로그인한
+     역할에 따라 달라짐: Performer로 보면 제출한 가이드/채택된 콜라보/누적 정산 수익
+     요약 카드 + 제출·수익 14일 추이 차트, 내 가이드 목록(상태 배지 포함)을 보여줌.
+     수익은 `releaseEscrow()`가 Split 비율대로 적립하는 `CashTransaction`
+     (`ESCROW_RELEASE`)을 근거로 집계해 실제 입금액과 정확히 일치.
+  3. **곡 의뢰 취소 + 마감 임박 알림** — 만들 때 놓쳤던 두 시나리오 보완. 구매자가
+     지원 모집 중(`OPEN`)인 의뢰를 취소하면 지원자 전원에게 알림이 가고 의뢰는
+     `CANCELLED`로 전환(`POST /api/commissions/[id]/cancel`, 매칭 이후는 이미 크리에이터가
+     작업을 시작했을 수 있어 취소 불가). 마감 24시간 이내로 다가온 `OPEN` 의뢰는
+     구매자에게 1회만 알림(`deadlineNotifiedAt`으로 중복 발송 방지,
+     `notifyUpcomingCommissionDeadlines()` — `settleExpiredEscrows()`와 동일하게 목록
+     페이지 진입 시 lazy 실행).
+- [x] 상단 메뉴 줄바꿈 수정 — 메뉴 항목이 늘면서(곡의뢰/좋아요 등) 중간폭 화면에서
+      검색창과 폭을 다투다 항목 텍스트가 2줄로 꺾이던 문제. `whitespace-nowrap`으로
+      줄바꿈을 막고, 검색창을 `lg` 이상 폭에서만 보이게(그 아래는 돋보기 아이콘) 밀어
+      좁은 폭에서 메뉴가 우선 확보되도록 조정.
+
 ## 테스트 계정 (`npx prisma db seed` 실행 후)
 
 모두 비밀번호 `password1234`:

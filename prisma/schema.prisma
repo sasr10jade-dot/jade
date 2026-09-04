@@ -87,6 +87,8 @@ enum NotificationType {
   COMMISSION_SELECTED
   COMMISSION_REJECTED
   COMMISSION_DELIVERED
+  COMMISSION_DEADLINE_SOON
+  COMMISSION_CANCELLED
 }
 
 enum CommissionStatus {
@@ -418,6 +420,7 @@ model CommissionRequest {
   licenseType  LicenseType
   deadline     DateTime
   status       CommissionStatus  @default(OPEN)
+  deadlineNotifiedAt DateTime? // 마감 임박(24시간 이내) 알림을 이미 보냈는지 — 목록 페이지 진입마다 중복 발송 방지
   createdAt    DateTime          @default(now())
 
   offers CommissionOffer[]
