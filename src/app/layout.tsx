@@ -6,7 +6,7 @@ import { SiteFooter } from "@/components/layout/site-footer";
 import { Toaster } from "@/components/ui/sonner";
 import { SessionProvider } from "@/components/providers/session-provider";
 import { QueueProvider } from "@/components/player/queue-context";
-import { QueueBar, QueueBarSpacer } from "@/components/player/queue-bar";
+import { QueueBar, QueueBarSpacer, QueueExpandedView } from "@/components/player/queue-bar";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -44,6 +44,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             {/* 하단 큐 플레이어와 겹치지 않도록 토스트는 우상단에 표시 */}
             <Toaster position="top-right" />
             <QueueBar />
+            <QueueExpandedView />
           </QueueProvider>
         </SessionProvider>
       </body>

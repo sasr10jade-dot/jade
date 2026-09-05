@@ -37,6 +37,7 @@ export function QueueBar() {
     close,
     toggleShuffle,
     toggleRepeat,
+    setExpanded,
   } = useQueue();
   if (!currentTrack) return null;
 
@@ -46,7 +47,12 @@ export function QueueBar() {
   return (
     <div className="fixed inset-x-0 bottom-0 z-30 border-t bg-background/95 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-2.5">
-        <div className="flex min-w-0 flex-1 items-center gap-3">
+        <button
+          type="button"
+          onClick={() => setExpanded(true)}
+          aria-label="플레이어 크게 보기"
+          className="flex min-w-0 flex-1 items-center gap-3 text-left"
+        >
           <div className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-md bg-muted">
             {currentTrack.thumbnailUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -59,7 +65,7 @@ export function QueueBar() {
             <p className="truncate text-sm font-semibold">{currentTrack.title}</p>
             <p className="truncate text-xs text-muted-foreground">{currentTrack.creatorName}</p>
           </div>
-        </div>
+        </button>
 
         <div className="flex items-center gap-1">
           <button
@@ -152,6 +158,17 @@ export function QueueBar() {
 
         <button
           type="button"
+          onClick={() => setExpanded(true)}
+          aria-label="플레이어 크게 보기"
+          className="shrink-0 rounded-md p-2 text-muted-foreground transition hover:bg-muted hover:text-foreground"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="size-4">
+            <path d="m18 15-6-6-6 6" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+
+        <button
+          type="button"
           onClick={close}
           aria-label="플레이어 닫기"
           className="shrink-0 rounded-md p-2 text-muted-foreground transition hover:bg-muted hover:text-foreground"
@@ -160,6 +177,190 @@ export function QueueBar() {
             <path d="M18 6 6 18M6 6l12 12" strokeLinecap="round" />
           </svg>
         </button>
+      </div>
+    </div>
+  );
+}
+
+// "크게 보기" — 전체화면으로 확장된 플레이어. 앨범 아트/컨트롤을 크게 보여주고 그
+// 아래에 현재 큐(재생목록)를 나열해 원하는 곡으로 바로 점프할 수 있게 한다.
+export function QueueExpandedView() {
+  const {
+    currentTrack,
+    position,
+    total,
+    isPlaying,
+    currentTime,
+    duration,
+    shuffle,
+    repeat,
+    expanded,
+    orderedQueue,
+    togglePlay,
+    next,
+    prev,
+    seekTo,
+    playAt,
+    toggleShuffle,
+    toggleRepeat,
+    setExpanded,
+  } = useQueue();
+
+  if (!expanded || !currentTrack) return null;
+
+  const atStart = position === 0;
+  const atEnd = position >= total - 1;
+
+  return (
+    <div className="fixed inset-0 z-40 flex flex-col bg-background">
+      <div className="flex items-center justify-between px-5 py-4">
+        <button
+          type="button"
+          onClick={() => setExpanded(false)}
+          aria-label="작게 보기"
+          className="rounded-md p-2 text-muted-foreground transition hover:bg-muted hover:text-foreground"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="size-5">
+            <path d="m6 9 6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </button>
+        <span className="text-sm font-semibold text-muted-foreground">재생 중</span>
+        <div className="size-9" />
+      </div>
+
+      <div className="mx-auto flex w-full max-w-md flex-1 flex-col overflow-hidden px-5">
+        <div className="mx-auto flex aspect-square w-full max-w-72 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-muted">
+          {currentTrack.thumbnailUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={currentTrack.thumbnailUrl} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <span className="text-6xl font-black text-muted-foreground">{currentTrack.title.slice(0, 1)}</span>
+          )}
+        </div>
+
+        <div className="mt-6 shrink-0 text-center">
+          <p className="truncate text-lg font-bold">{currentTrack.title}</p>
+          <p className="truncate text-sm text-muted-foreground">{currentTrack.creatorName}</p>
+        </div>
+
+        <div className="mt-4 flex shrink-0 items-center gap-2">
+          <span className="w-9 shrink-0 text-right text-[11px] text-muted-foreground">{formatTime(currentTime)}</span>
+          <input
+            type="range"
+            min={0}
+            max={duration || 0}
+            value={Math.min(currentTime, duration || 0)}
+            onChange={(e) => seekTo(Number(e.target.value))}
+            aria-label="재생 위치"
+            className="h-1 flex-1 accent-primary"
+          />
+          <span className="w-9 shrink-0 text-[11px] text-muted-foreground">{formatTime(duration)}</span>
+        </div>
+
+        <div className="mt-4 flex shrink-0 items-center justify-center gap-3">
+          <button
+            type="button"
+            onClick={toggleShuffle}
+            aria-label="랜덤 재생"
+            aria-pressed={shuffle}
+            className={`rounded-md p-2 transition hover:bg-muted ${shuffle ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="size-5">
+              <path
+                d="M4 6h3.5l9 12H20M4 18h3.5l2.5-3.3M14.5 6H20m0 0-2.5 2.5M20 6l-2.5-2.5M20 18l-2.5 2.5M20 18l-2.5-2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
+          <button
+            type="button"
+            onClick={prev}
+            disabled={atStart && !repeat}
+            aria-label="이전 곡"
+            className="rounded-md p-2 text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:opacity-30"
+          >
+            <svg viewBox="0 0 24 24" fill="currentColor" className="size-6">
+              <path d="M6 6h2v12H6zM20 6v12l-9-6z" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            onClick={togglePlay}
+            aria-label={isPlaying ? "일시정지" : "재생"}
+            className="flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground transition hover:opacity-90"
+          >
+            {isPlaying ? (
+              <svg viewBox="0 0 24 24" fill="currentColor" className="size-6">
+                <path d="M6 5h4v14H6zM14 5h4v14h-4z" />
+              </svg>
+            ) : (
+              <svg viewBox="0 0 24 24" fill="currentColor" className="ml-0.5 size-6">
+                <path d="M8 5v14l11-7z" />
+              </svg>
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={next}
+            disabled={atEnd && !repeat}
+            aria-label="다음 곡"
+            className="rounded-md p-2 text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:opacity-30"
+          >
+            <svg viewBox="0 0 24 24" fill="currentColor" className="size-6">
+              <path d="M16 6h2v12h-2zM4 6v12l9-6z" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            onClick={toggleRepeat}
+            aria-label="반복 재생"
+            aria-pressed={repeat}
+            className={`rounded-md p-2 transition hover:bg-muted ${repeat ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="size-5">
+              <path
+                d="M17 2l4 4-4 4M3 11V9a4 4 0 0 1 4-4h14M7 22l-4-4 4-4M21 13v2a4 4 0 0 1-4 4H3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
+        </div>
+
+        <div className="mt-6 flex min-h-0 flex-1 flex-col border-t pt-4">
+          <p className="shrink-0 text-xs font-semibold text-muted-foreground">재생목록 ({total}곡)</p>
+          <div className="mt-2 min-h-0 flex-1 space-y-1 overflow-y-auto pb-4">
+            {orderedQueue.map((t, i) => (
+              <button
+                key={`${t.id}-${i}`}
+                type="button"
+                onClick={() => playAt(i)}
+                className={`flex w-full items-center gap-3 rounded-lg p-2 text-left transition hover:bg-muted ${i === position ? "bg-muted" : ""}`}
+              >
+                <div className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-md bg-muted">
+                  {t.thumbnailUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={t.thumbnailUrl} alt="" className="h-full w-full object-cover" />
+                  ) : (
+                    <span className="text-xs font-bold text-muted-foreground">{t.title.slice(0, 1)}</span>
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className={`truncate text-sm ${i === position ? "font-semibold text-primary" : "font-medium"}`}>
+                    {t.title}
+                  </p>
+                  <p className="truncate text-xs text-muted-foreground">{t.creatorName}</p>
+                </div>
+                {i === position && isPlaying && (
+                  <span className="shrink-0 text-xs text-primary" aria-hidden="true">
+                    ♪
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );

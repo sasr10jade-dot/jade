@@ -22,7 +22,10 @@ type QueueContextValue = {
   duration: number;
   shuffle: boolean;
   repeat: boolean;
+  expanded: boolean;
+  orderedQueue: QueueTrack[];
   playQueue: (tracks: QueueTrack[], startIndex: number) => void;
+  playAt: (pos: number) => void;
   togglePlay: () => void;
   next: () => void;
   prev: () => void;
@@ -30,6 +33,7 @@ type QueueContextValue = {
   close: () => void;
   toggleShuffle: () => void;
   toggleRepeat: () => void;
+  setExpanded: (v: boolean) => void;
 };
 
 const QueueContext = createContext<QueueContextValue | null>(null);
@@ -75,9 +79,11 @@ export function QueueProvider({ children }: { children: React.ReactNode }) {
   const [duration, setDuration] = useState(0);
   const [shuffle, setShuffle] = useState(false);
   const [repeat, setRepeat] = useState(false);
+  const [expanded, setExpanded] = useState(false);
 
   const currentIndex = order[position];
   const currentTrack = queue[currentIndex];
+  const orderedQueue = order.map((i) => queue[i]);
 
   const stop = useCallback(() => {
     audioRef.current?.pause();
@@ -106,6 +112,13 @@ export function QueueProvider({ children }: { children: React.ReactNode }) {
     setPosition(Math.max(0, ord.indexOf(startIndex)));
     setIsPlaying(true);
     loadAndPlay(tracks[startIndex]);
+  }
+
+  function playAt(pos: number) {
+    if (pos < 0 || pos >= order.length) return;
+    setPosition(pos);
+    setIsPlaying(true);
+    loadAndPlay(queue[order[pos]]);
   }
 
   function togglePlay() {
@@ -149,6 +162,7 @@ export function QueueProvider({ children }: { children: React.ReactNode }) {
     setQueue([]);
     setOrder([]);
     setPosition(0);
+    setExpanded(false);
   }
 
   function toggleShuffle() {
@@ -180,7 +194,10 @@ export function QueueProvider({ children }: { children: React.ReactNode }) {
         duration,
         shuffle,
         repeat,
+        expanded,
+        orderedQueue,
         playQueue,
+        playAt,
         togglePlay,
         next,
         prev,
@@ -188,6 +205,7 @@ export function QueueProvider({ children }: { children: React.ReactNode }) {
         close,
         toggleShuffle,
         toggleRepeat,
+        setExpanded,
       }}
     >
       {children}
