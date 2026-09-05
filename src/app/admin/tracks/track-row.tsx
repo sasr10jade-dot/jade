@@ -46,7 +46,8 @@ export function TrackRow({ track }: { track: TrackWithCreator }) {
         </span>
       </div>
       <Badge variant="outline">{track.status}</Badge>
-      {track.removedByAdmin && <Badge variant="destructive">숨김 처리됨</Badge>}
+      {track.removedByAdmin && <Badge variant="destructive">관리자 숨김</Badge>}
+      {track.removedByCreator && <Badge variant="secondary">크리에이터 비공개</Badge>}
       <Button
         variant={track.removedByAdmin ? "default" : "outline"}
         size="sm"

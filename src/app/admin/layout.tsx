@@ -8,6 +8,7 @@ const ADMIN_NAV = [
   { href: "/admin/tracks", label: "트랙 모더레이션" },
   { href: "/admin/disputes", label: "분쟁/보류" },
   { href: "/admin/settlements", label: "정산" },
+  { href: "/admin/commissions", label: "곡 의뢰" },
   { href: "/admin/support", label: "고객문의" },
 ] as const;
 
