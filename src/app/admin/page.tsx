@@ -17,7 +17,7 @@ export default async function AdminDashboardPage() {
   await settleExpiredEscrows();
   const [userCount, trackCount, stalledSplits, disputedOrders, openTickets, orders, platformStats] = await Promise.all([
     prisma.user.count(),
-    prisma.track.count({ where: { removedByAdmin: false } }),
+    prisma.track.count({ where: { removedByAdmin: false, removedByCreator: false } }),
     prisma.split.count({ where: { status: "STALLED" } }),
     prisma.order.count({ where: { status: "DISPUTED" } }),
     prisma.supportTicket.count({ where: { status: "OPEN" } }),

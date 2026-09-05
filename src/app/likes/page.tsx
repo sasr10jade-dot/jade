@@ -14,7 +14,7 @@ export default async function LikesPage() {
   if (!session?.user) redirect("/login");
 
   const likes = await prisma.like.findMany({
-    where: { userId: session.user.id, track: { removedByAdmin: false } },
+    where: { userId: session.user.id, track: { removedByAdmin: false, removedByCreator: false } },
     orderBy: { createdAt: "desc" },
     include: { track: { include: TRACK_INCLUDE } },
   });

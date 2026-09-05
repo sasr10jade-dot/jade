@@ -36,8 +36,8 @@ export async function POST(req: Request) {
   if (!track) {
     return NextResponse.json({ error: "트랙을 찾을 수 없습니다" }, { status: 404 });
   }
-  if (track.removedByAdmin) {
-    return NextResponse.json({ error: "관리자에 의해 숨김 처리된 트랙입니다" }, { status: 403 });
+  if (track.removedByAdmin || track.removedByCreator) {
+    return NextResponse.json({ error: "숨김 처리된 트랙입니다" }, { status: 403 });
   }
 
   const license = track.licenses.find((l) => l.type === licenseType);

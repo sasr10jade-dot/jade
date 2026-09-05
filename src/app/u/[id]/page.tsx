@@ -59,7 +59,7 @@ export default async function PublicProfilePage({
 
   const tracks = isCreator
     ? await prisma.track.findMany({
-        where: { creatorId: id, removedByAdmin: false },
+        where: { creatorId: id, removedByAdmin: false, removedByCreator: false },
         orderBy: [{ playCount: "desc" }, { createdAt: "desc" }],
         include: TRACK_INCLUDE,
       })

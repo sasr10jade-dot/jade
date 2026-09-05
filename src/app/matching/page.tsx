@@ -14,7 +14,7 @@ const CLOSED_STATUSES = new Set(["SPLIT_AGREED", "LISTED"]);
 // 우선 노출해 아직 보컬이 없는 곡부터 채워지도록 정렬.
 export default async function MatchingPage() {
   const tracks = await prisma.track.findMany({
-    where: { removedByAdmin: false, status: { notIn: [...CLOSED_STATUSES] } },
+    where: { removedByAdmin: false, removedByCreator: false, status: { notIn: [...CLOSED_STATUSES] } },
     orderBy: [{ createdAt: "desc" }],
     include: {
       _count: { select: { guides: true } },

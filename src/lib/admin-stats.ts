@@ -15,7 +15,7 @@ export async function getPlatformStats() {
     prisma.user.groupBy({ by: ["role"], _count: { _all: true } }),
     prisma.track.groupBy({
       by: ["genre"],
-      where: { removedByAdmin: false, genre: { not: null } },
+      where: { removedByAdmin: false, removedByCreator: false, genre: { not: null } },
       _count: { _all: true },
       orderBy: { _count: { genre: "desc" } },
       take: 5,

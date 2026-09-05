@@ -10,6 +10,7 @@ import { getPerformerStats } from "@/lib/performer-stats";
 import { StudioTrackThumbnail } from "./track-thumbnail";
 import { StatsSection } from "./stats-section";
 import { PerformerStatsSection } from "./performer-stats-section";
+import { UnpublishButton } from "./unpublish-button";
 
 const STATUS_LABEL: Record<string, string> = {
   DRAFT: "가이드 대기중",
@@ -152,9 +153,11 @@ export default async function StudioPage() {
                 <span>
                   가이드 {t._count.guides}건 · 판매 {t._count.orders}건
                 </span>
+                {t.removedByCreator && <Badge variant="destructive">비공개</Badge>}
                 <Badge variant="outline">{STATUS_LABEL[t.status] ?? t.status}</Badge>
               </div>
             </Link>
+            <UnpublishButton trackId={t.id} removed={t.removedByCreator} />
             <Link href={`/studio/${t.id}/edit`}>
               <Button variant="outline" size="sm">
                 수정

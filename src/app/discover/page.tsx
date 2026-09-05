@@ -20,33 +20,41 @@ const SORT_OPTIONS = [
 export default async function DiscoverPage({
   searchParams,
 }: {
-  searchParams: Promise<{ genre?: string; mood?: string; bpmMin?: string; bpmMax?: string; sort?: string }>;
+  searchParams: Promise<{ genre?: string; mood?: string; tag?: string; bpmMin?: string; bpmMax?: string; sort?: string }>;
 }) {
-  const { genre, mood, bpmMin, bpmMax, sort } = await searchParams;
-  const hasFilter = !!(genre || mood || bpmMin || bpmMax || (sort && sort !== "popular"));
+  const { genre, mood, tag, bpmMin, bpmMax, sort } = await searchParams;
+  const hasFilter = !!(genre || mood || tag || bpmMin || bpmMax || (sort && sort !== "popular"));
 
   const topCreators = hasFilter ? [] : await getTopCreators();
 
-  const [genreRows, moodRows] = await Promise.all([
+  const [genreRows, moodRows, tagRows] = await Promise.all([
     prisma.track.findMany({
-      where: { removedByAdmin: false, genre: { not: null } },
+      where: { removedByAdmin: false, removedByCreator: false, genre: { not: null } },
       distinct: ["genre"],
       select: { genre: true },
       orderBy: { genre: "asc" },
     }),
     prisma.track.findMany({
-      where: { removedByAdmin: false, mood: { not: null } },
+      where: { removedByAdmin: false, removedByCreator: false, mood: { not: null } },
       distinct: ["mood"],
       select: { mood: true },
       orderBy: { mood: "asc" },
     }),
+    prisma.track.findMany({
+      where: { removedByAdmin: false, removedByCreator: false, tags: { not: null } },
+      select: { tags: true },
+    }),
   ]);
   const genreOptions = genreRows.map((r) => r.genre!).filter(Boolean);
   const moodOptions = moodRows.map((r) => r.mood!).filter(Boolean);
+  // tags는 트랙당 콤마로 이어붙인 자유 문자열이라 하나의 컬럼처럼 distinct 조회가 안 돼 —
+  // 전체를 가져와 쪼개고 중복 제거해서 필터 옵션 목록을 만든다.
+  const tagOptions = [...new Set(tagRows.flatMap((r) => r.tags!.split(",").map((t) => t.trim()).filter(Boolean)))].sort();
 
-  const where: Prisma.TrackWhereInput = { removedByAdmin: false };
+  const where: Prisma.TrackWhereInput = { removedByAdmin: false, removedByCreator: false };
   if (genre) where.genre = genre;
   if (mood) where.mood = mood;
+  if (tag) where.tags = { contains: tag };
   if (bpmMin || bpmMax) {
     where.bpm = {
       ...(bpmMin ? { gte: Number(bpmMin) } : {}),
@@ -69,7 +77,7 @@ export default async function DiscoverPage({
   const mostLiked = hasFilter
     ? []
     : await prisma.track.findMany({
-        where: { removedByAdmin: false, likes: { some: {} } },
+        where: { removedByAdmin: false, removedByCreator: false, likes: { some: {} } },
         orderBy: { likes: { _count: "desc" } },
         take: 10,
         include: TRACK_INCLUDE,
@@ -88,12 +96,15 @@ export default async function DiscoverPage({
     <div className="mx-auto max-w-6xl px-5 py-10">
       <h1 className="text-2xl font-bold tracking-tight">Discover</h1>
       <p className="mt-1 text-sm text-muted-foreground">
-        필터(장르, 무드, BPM) → 가이드 포함 풀버전 청취
+        필터(장르, 무드, 태그, BPM) → 가이드 포함 풀버전 청취
       </p>
 
       <form action="/discover" method="GET" className="mt-6 flex flex-wrap items-center gap-2">
         <FilterSelect name="genre" defaultValue={genre ?? ""} label="장르: 전체" options={genreOptions} />
         <FilterSelect name="mood" defaultValue={mood ?? ""} label="무드: 전체" options={moodOptions} />
+        {tagOptions.length > 0 && (
+          <FilterSelect name="tag" defaultValue={tag ?? ""} label="태그: 전체" options={tagOptions} />
+        )}
         <input
           type="number"
           name="bpmMin"
@@ -194,7 +205,7 @@ type TopCreator = {
 // 재생수를 랭킹 지표로 쓰고 팔로워 수는 카드에 보조 정보로만 노출.
 async function getTopCreators(): Promise<TopCreator[]> {
   const creators = await prisma.user.findMany({
-    where: { role: "CREATOR", tracksCreated: { some: { removedByAdmin: false } } },
+    where: { role: "CREATOR", tracksCreated: { some: { removedByAdmin: false, removedByCreator: false } } },
     select: {
       id: true,
       name: true,
@@ -202,7 +213,7 @@ async function getTopCreators(): Promise<TopCreator[]> {
       displayNickname: true,
       isSeedCreator: true,
       _count: { select: { followers: true } },
-      tracksCreated: { where: { removedByAdmin: false }, select: { playCount: true } },
+      tracksCreated: { where: { removedByAdmin: false, removedByCreator: false }, select: { playCount: true } },
     },
   });
 

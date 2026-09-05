@@ -18,13 +18,13 @@ export default async function Home() {
 
   const [popular, newest, followedTracks] = await Promise.all([
     prisma.track.findMany({
-      where: { removedByAdmin: false },
+      where: { removedByAdmin: false, removedByCreator: false },
       orderBy: [{ playCount: "desc" }, { createdAt: "desc" }],
       take: 12,
       include: TRACK_SELECT,
     }),
     prisma.track.findMany({
-      where: { removedByAdmin: false },
+      where: { removedByAdmin: false, removedByCreator: false },
       orderBy: { createdAt: "desc" },
       take: 12,
       include: TRACK_SELECT,
@@ -33,6 +33,7 @@ export default async function Home() {
       ? prisma.track.findMany({
           where: {
             removedByAdmin: false,
+            removedByCreator: false,
             creator: { followers: { some: { followerId: session.user.id } } },
           },
           orderBy: { createdAt: "desc" },

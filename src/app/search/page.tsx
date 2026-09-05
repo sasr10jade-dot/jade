@@ -19,10 +19,12 @@ export default async function SearchPage({
     ? await prisma.track.findMany({
         where: {
           removedByAdmin: false,
+          removedByCreator: false,
           OR: [
             { title: { contains: query } },
             { genre: { contains: query } },
             { mood: { contains: query } },
+            { tags: { contains: query } },
             { creator: { name: { contains: query } } },
             { creator: { nickname: { contains: query } } },
           ],
@@ -40,7 +42,7 @@ export default async function SearchPage({
           type="text"
           name="q"
           defaultValue={query}
-          placeholder="트랙 제목, 크리에이터, 장르로 검색"
+          placeholder="트랙 제목, 크리에이터, 장르, 태그로 검색"
           autoFocus
           className="w-full max-w-md rounded-lg border border-input bg-transparent px-3 py-2 text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
         />
