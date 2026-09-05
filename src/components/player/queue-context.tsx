@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useRef, useState } from "react";
 import { claimPlayback } from "@/lib/now-playing";
 import { pingTrackPlay } from "@/lib/waveform";
+import { audioEngine } from "@/lib/audio-engine";
 
 export type QueueTrack = {
   id: string;
@@ -102,7 +103,15 @@ export function QueueProvider({ children }: { children: React.ReactNode }) {
       pinged.current = null;
     }
     claimPlayback(stop);
-    el.play().catch(() => setIsPlaying(false));
+    // 기본 재생을 먼저 보장하고(EQ/비주얼라이저 그래프 연결은 그 이후 별도 시도) —
+    // use-native-audio-player.ts와 동일한 순서. 트랙 상세 페이지 플레이어와 같은
+    // audioEngine을 공유하므로 큐 플레이어에서도 이퀄라이저/비주얼라이저가 그대로 동작한다.
+    el.play()
+      .then(() => {
+        audioEngine.connect(el);
+        audioEngine.resume();
+      })
+      .catch(() => setIsPlaying(false));
   }
 
   function playQueue(tracks: QueueTrack[], startIndex: number) {
@@ -129,7 +138,12 @@ export function QueueProvider({ children }: { children: React.ReactNode }) {
       setIsPlaying(false);
     } else {
       claimPlayback(stop);
-      el.play().catch(() => {});
+      el.play()
+        .then(() => {
+          audioEngine.connect(el);
+          audioEngine.resume();
+        })
+        .catch(() => {});
       setIsPlaying(true);
     }
   }
