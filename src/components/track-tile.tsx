@@ -88,7 +88,11 @@ export function TrackTile({
             </div>
           </>
         )}
-        <div className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 transition group-hover:opacity-100">
+        {/* 마우스(정밀 포인터)에서는 호버해야 어두운 오버레이+버튼이 나타나지만, 터치 기기
+            (pointer: coarse)는 hover 상태 자체가 없어 버튼이 영영 안 보일 수 있다. 그래서
+            터치 기기에서는 어두운 오버레이 없이 재생 버튼만 항상 보이게 하고, 정밀 포인터
+            기기에서만 기존의 호버 게이팅(오버레이+버튼 페이드인)을 적용한다. */}
+        <div className="absolute inset-0 flex items-center justify-center transition pointer-fine:bg-black/20 pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100">
           {t.fileUrl ? (
             <button
               type="button"

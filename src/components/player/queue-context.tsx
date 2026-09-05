@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useRef, useState } from "react";
 import { claimPlayback } from "@/lib/now-playing";
 import { pingTrackPlay } from "@/lib/waveform";
 
@@ -52,30 +52,27 @@ export function QueueProvider({ children }: { children: React.ReactNode }) {
     setIsPlaying(false);
   }, []);
 
-  const playQueue = useCallback((tracks: QueueTrack[], startIndex: number) => {
-    setQueue(tracks);
-    setCurrentIndex(startIndex);
-    setIsPlaying(true);
-  }, []);
-
-  // queue/currentIndex가 바뀔 때마다(playQueue, next, prev, 자동 다음곡) 실제 src 전환 +
-  // 재생을 여기서 일괄 처리 — "무엇을 재생할지 결정"과 "실제로 재생 시작"을 분리해두면
-  // next()/prev()가 그냥 인덱스만 바꿔도 항상 일관되게 동작한다.
-  useEffect(() => {
+  // 모바일(특히 iOS Safari)은 el.play()가 사용자 제스처의 동기 호출 스택 안에서
+  // 실행돼야만 허용한다 — setState 후 useEffect에서 나중에 play()를 부르면(비동기,
+  // 제스처 컨텍스트 밖) 데스크톱에선 되던 게 모바일에서는 조용히 막힌다. 그래서
+  // playQueue/next/prev는 클릭 핸들러 안에서 이 함수를 직접, 동기적으로 호출한다.
+  function loadAndPlay(track: QueueTrack | undefined) {
     const el = audioRef.current;
-    const track = queue[currentIndex];
     if (!el || !track) return;
-
     if (el.src !== track.fileUrl) {
       el.src = track.fileUrl;
       pinged.current = null;
     }
-    if (isPlaying) {
-      claimPlayback(stop);
-      el.play().catch(() => setIsPlaying(false));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [queue, currentIndex]);
+    claimPlayback(stop);
+    el.play().catch(() => setIsPlaying(false));
+  }
+
+  function playQueue(tracks: QueueTrack[], startIndex: number) {
+    setQueue(tracks);
+    setCurrentIndex(startIndex);
+    setIsPlaying(true);
+    loadAndPlay(tracks[startIndex]);
+  }
 
   function togglePlay() {
     const el = audioRef.current;
@@ -91,10 +88,14 @@ export function QueueProvider({ children }: { children: React.ReactNode }) {
   }
 
   function next() {
-    setCurrentIndex((i) => Math.min(i + 1, queue.length - 1));
+    const ni = Math.min(currentIndex + 1, queue.length - 1);
+    setCurrentIndex(ni);
+    if (isPlaying) loadAndPlay(queue[ni]);
   }
   function prev() {
-    setCurrentIndex((i) => Math.max(i - 1, 0));
+    const pi = Math.max(currentIndex - 1, 0);
+    setCurrentIndex(pi);
+    if (isPlaying) loadAndPlay(queue[pi]);
   }
   function seekTo(time: number) {
     if (audioRef.current) audioRef.current.currentTime = time;
@@ -124,11 +125,17 @@ export function QueueProvider({ children }: { children: React.ReactNode }) {
           }
         }}
         onEnded={() => {
-          setCurrentIndex((i) => {
-            if (i + 1 < queue.length) return i + 1;
+          if (currentIndex + 1 < queue.length) {
+            const ni = currentIndex + 1;
+            setCurrentIndex(ni);
+            loadAndPlay(queue[ni]);
+          } else {
             setIsPlaying(false);
-            return i;
-          });
+          }
+        }}
+        onError={(e) => {
+          console.error("[VOICEMAP] 큐 재생 오류:", e.currentTarget.error);
+          setIsPlaying(false);
         }}
       />
     </QueueContext.Provider>
