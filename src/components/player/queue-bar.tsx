@@ -21,33 +21,66 @@ export function QueueBarSpacer() {
 // 때만 화면 하단에 고정 표시되는 미니 플레이어. 페이지를 이동해도(라우트 전환) 계속
 // 떠있고 재생이 끊기지 않는다(QueueProvider가 레이아웃에 한 번만 마운트되기 때문).
 export function QueueBar() {
-  const { queue, currentIndex, isPlaying, currentTime, duration, togglePlay, next, prev, seekTo, close } = useQueue();
-  const track = queue[currentIndex];
-  if (!track) return null;
+  const {
+    currentTrack,
+    position,
+    total,
+    isPlaying,
+    currentTime,
+    duration,
+    shuffle,
+    repeat,
+    togglePlay,
+    next,
+    prev,
+    seekTo,
+    close,
+    toggleShuffle,
+    toggleRepeat,
+  } = useQueue();
+  if (!currentTrack) return null;
+
+  const atStart = position === 0;
+  const atEnd = position >= total - 1;
 
   return (
     <div className="fixed inset-x-0 bottom-0 z-30 border-t bg-background/95 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-2.5">
         <div className="flex min-w-0 flex-1 items-center gap-3">
           <div className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-md bg-muted">
-            {track.thumbnailUrl ? (
+            {currentTrack.thumbnailUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={track.thumbnailUrl} alt="" className="h-full w-full object-cover" />
+              <img src={currentTrack.thumbnailUrl} alt="" className="h-full w-full object-cover" />
             ) : (
-              <span className="text-xs font-bold text-muted-foreground">{track.title.slice(0, 1)}</span>
+              <span className="text-xs font-bold text-muted-foreground">{currentTrack.title.slice(0, 1)}</span>
             )}
           </div>
           <div className="min-w-0">
-            <p className="truncate text-sm font-semibold">{track.title}</p>
-            <p className="truncate text-xs text-muted-foreground">{track.creatorName}</p>
+            <p className="truncate text-sm font-semibold">{currentTrack.title}</p>
+            <p className="truncate text-xs text-muted-foreground">{currentTrack.creatorName}</p>
           </div>
         </div>
 
         <div className="flex items-center gap-1">
           <button
             type="button"
+            onClick={toggleShuffle}
+            aria-label="랜덤 재생"
+            aria-pressed={shuffle}
+            className={`hidden rounded-md p-2 transition hover:bg-muted sm:block ${shuffle ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="size-4">
+              <path
+                d="M4 6h3.5l9 12H20M4 18h3.5l2.5-3.3M14.5 6H20m0 0-2.5 2.5M20 6l-2.5-2.5M20 18l-2.5 2.5M20 18l-2.5-2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
+          <button
+            type="button"
             onClick={prev}
-            disabled={currentIndex === 0}
+            disabled={atStart && !repeat}
             aria-label="이전 곡"
             className="rounded-md p-2 text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:opacity-30"
           >
@@ -74,12 +107,27 @@ export function QueueBar() {
           <button
             type="button"
             onClick={next}
-            disabled={currentIndex >= queue.length - 1}
+            disabled={atEnd && !repeat}
             aria-label="다음 곡"
             className="rounded-md p-2 text-muted-foreground transition hover:bg-muted hover:text-foreground disabled:opacity-30"
           >
             <svg viewBox="0 0 24 24" fill="currentColor" className="size-4">
               <path d="M16 6h2v12h-2zM4 6v12l9-6z" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            onClick={toggleRepeat}
+            aria-label="반복 재생"
+            aria-pressed={repeat}
+            className={`hidden rounded-md p-2 transition hover:bg-muted sm:block ${repeat ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="size-4">
+              <path
+                d="M17 2l4 4-4 4M3 11V9a4 4 0 0 1 4-4h14M7 22l-4-4 4-4M21 13v2a4 4 0 0 1-4 4H3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
             </svg>
           </button>
         </div>
@@ -99,7 +147,7 @@ export function QueueBar() {
         </div>
 
         <span className="hidden shrink-0 text-xs text-muted-foreground md:inline">
-          {currentIndex + 1} / {queue.length}
+          {position + 1} / {total}
         </span>
 
         <button

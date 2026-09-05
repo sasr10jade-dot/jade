@@ -14,16 +14,22 @@ export type QueueTrack = {
 
 type QueueContextValue = {
   queue: QueueTrack[];
-  currentIndex: number;
+  currentTrack: QueueTrack | undefined;
+  position: number;
+  total: number;
   isPlaying: boolean;
   currentTime: number;
   duration: number;
+  shuffle: boolean;
+  repeat: boolean;
   playQueue: (tracks: QueueTrack[], startIndex: number) => void;
   togglePlay: () => void;
   next: () => void;
   prev: () => void;
   seekTo: (time: number) => void;
   close: () => void;
+  toggleShuffle: () => void;
+  toggleRepeat: () => void;
 };
 
 const QueueContext = createContext<QueueContextValue | null>(null);
@@ -34,18 +40,44 @@ export function useQueue() {
   return ctx;
 }
 
+function identityOrder(n: number) {
+  return Array.from({ length: n }, (_, i) => i);
+}
+
+// Fisher-Yates 셔플 후 keepFirst(현재 재생 중이던 트랙)를 맨 앞으로 보내 — 셔플을 켜는
+// 순간 지금 듣던 곡이 갑자기 바뀌지 않게.
+function shuffleOrder(n: number, keepFirst: number) {
+  const arr = identityOrder(n);
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  const idx = arr.indexOf(keepFirst);
+  if (idx > 0) [arr[0], arr[idx]] = [arr[idx], arr[0]];
+  return arr;
+}
+
 // 전역 "연속 듣기" 큐 — 레이아웃 최상단에 한 번만 마운트되어 페이지를 이동해도(라우트
 // 전환) 재생이 끊기지 않는다. 트랙 상세 페이지의 개별 플레이어와는 완전히 별개의
 // <audio> 엘리먼트를 쓰고, 둘 중 하나가 재생을 시작하면 lib/now-playing.ts를 통해
 // 다른 쪽을 멈춰서 소리가 겹치지 않게 한다.
+//
+// 재생 순서는 order(큐 인덱스의 순열) + position(그 순열 안에서의 위치)로 관리 —
+// 셔플을 켜면 order만 새로 섞고, 끄면 원래 순서(identity)로 되돌리되 지금 곡은 그대로.
 export function QueueProvider({ children }: { children: React.ReactNode }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const pinged = useRef<string | null>(null);
   const [queue, setQueue] = useState<QueueTrack[]>([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [order, setOrder] = useState<number[]>([]);
+  const [position, setPosition] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [shuffle, setShuffle] = useState(false);
+  const [repeat, setRepeat] = useState(false);
+
+  const currentIndex = order[position];
+  const currentTrack = queue[currentIndex];
 
   const stop = useCallback(() => {
     audioRef.current?.pause();
@@ -68,8 +100,10 @@ export function QueueProvider({ children }: { children: React.ReactNode }) {
   }
 
   function playQueue(tracks: QueueTrack[], startIndex: number) {
+    const ord = shuffle ? shuffleOrder(tracks.length, startIndex) : identityOrder(tracks.length);
     setQueue(tracks);
-    setCurrentIndex(startIndex);
+    setOrder(ord);
+    setPosition(Math.max(0, ord.indexOf(startIndex)));
     setIsPlaying(true);
     loadAndPlay(tracks[startIndex]);
   }
@@ -88,28 +122,73 @@ export function QueueProvider({ children }: { children: React.ReactNode }) {
   }
 
   function next() {
-    const ni = Math.min(currentIndex + 1, queue.length - 1);
-    setCurrentIndex(ni);
-    if (isPlaying) loadAndPlay(queue[ni]);
+    if (order.length === 0) return;
+    const atEnd = position >= order.length - 1;
+    if (atEnd && !repeat) return;
+    const np = atEnd ? 0 : position + 1;
+    setPosition(np);
+    if (isPlaying) loadAndPlay(queue[order[np]]);
   }
+
   function prev() {
-    const pi = Math.max(currentIndex - 1, 0);
-    setCurrentIndex(pi);
-    if (isPlaying) loadAndPlay(queue[pi]);
+    if (order.length === 0) return;
+    const atStart = position <= 0;
+    if (atStart && !repeat) return;
+    const pp = atStart ? order.length - 1 : position - 1;
+    setPosition(pp);
+    if (isPlaying) loadAndPlay(queue[order[pp]]);
   }
+
   function seekTo(time: number) {
     if (audioRef.current) audioRef.current.currentTime = time;
     setCurrentTime(time);
   }
+
   function close() {
     stop();
     setQueue([]);
-    setCurrentIndex(0);
+    setOrder([]);
+    setPosition(0);
+  }
+
+  function toggleShuffle() {
+    setShuffle((prevShuffle) => {
+      const nextShuffle = !prevShuffle;
+      if (queue.length > 0) {
+        const playingIndex = order[position];
+        const newOrder = nextShuffle ? shuffleOrder(queue.length, playingIndex) : identityOrder(queue.length);
+        setOrder(newOrder);
+        setPosition(Math.max(0, newOrder.indexOf(playingIndex)));
+      }
+      return nextShuffle;
+    });
+  }
+
+  function toggleRepeat() {
+    setRepeat((r) => !r);
   }
 
   return (
     <QueueContext.Provider
-      value={{ queue, currentIndex, isPlaying, currentTime, duration, playQueue, togglePlay, next, prev, seekTo, close }}
+      value={{
+        queue,
+        currentTrack,
+        position,
+        total: order.length,
+        isPlaying,
+        currentTime,
+        duration,
+        shuffle,
+        repeat,
+        playQueue,
+        togglePlay,
+        next,
+        prev,
+        seekTo,
+        close,
+        toggleShuffle,
+        toggleRepeat,
+      }}
     >
       {children}
       <audio
@@ -118,20 +197,20 @@ export function QueueProvider({ children }: { children: React.ReactNode }) {
         onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
         onLoadedMetadata={(e) => setDuration(e.currentTarget.duration || 0)}
         onPlay={() => {
-          const track = queue[currentIndex];
-          if (track && pinged.current !== track.id) {
-            pinged.current = track.id;
-            pingTrackPlay(track.id);
+          if (currentTrack && pinged.current !== currentTrack.id) {
+            pinged.current = currentTrack.id;
+            pingTrackPlay(currentTrack.id);
           }
         }}
         onEnded={() => {
-          if (currentIndex + 1 < queue.length) {
-            const ni = currentIndex + 1;
-            setCurrentIndex(ni);
-            loadAndPlay(queue[ni]);
-          } else {
+          const atEnd = position >= order.length - 1;
+          if (atEnd && !repeat) {
             setIsPlaying(false);
+            return;
           }
+          const np = atEnd ? 0 : position + 1;
+          setPosition(np);
+          loadAndPlay(queue[order[np]]);
         }}
         onError={(e) => {
           console.error("[VOICEMAP] 큐 재생 오류:", e.currentTarget.error);
