@@ -15,11 +15,12 @@ const ROLE_LABEL: Record<string, string> = {
 
 export default async function AdminDashboardPage() {
   await settleExpiredEscrows();
-  const [userCount, trackCount, stalledSplits, disputedOrders, orders, platformStats] = await Promise.all([
+  const [userCount, trackCount, stalledSplits, disputedOrders, openTickets, orders, platformStats] = await Promise.all([
     prisma.user.count(),
     prisma.track.count({ where: { removedByAdmin: false } }),
     prisma.split.count({ where: { status: "STALLED" } }),
     prisma.order.count({ where: { status: "DISPUTED" } }),
+    prisma.supportTicket.count({ where: { status: "OPEN" } }),
     prisma.order.findMany({ select: { amount: true, feeAmount: true, status: true } }),
     getPlatformStats(),
   ]);
@@ -38,6 +39,7 @@ export default async function AdminDashboardPage() {
     { label: "정산 완료액", value: formatKRW(settledGmv) },
     { label: "보류(STALLED) Split", value: String(stalledSplits) },
     { label: "이의 제기 주문", value: String(disputedOrders) },
+    { label: "미답변 고객문의", value: String(openTickets) },
   ];
 
   return (

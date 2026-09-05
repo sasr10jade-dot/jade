@@ -8,6 +8,7 @@ const ADMIN_NAV = [
   { href: "/admin/tracks", label: "트랙 모더레이션" },
   { href: "/admin/disputes", label: "분쟁/보류" },
   { href: "/admin/settlements", label: "정산" },
+  { href: "/admin/support", label: "고객문의" },
 ] as const;
 
 // 관리자 페이지는 ADMIN 역할 계정으로만 접근 (proxy.ts는 로그인 여부만 확인하므로

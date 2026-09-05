@@ -92,6 +92,7 @@ enum NotificationType {
   COMMISSION_CANCELLED
   ESCROW_REVIEW_REMINDER
   OFFER_EXPIRING_SOON
+  SUPPORT_TICKET_REPLIED
 }
 
 enum CommissionStatus {
@@ -106,6 +107,12 @@ enum CommissionOfferStatus {
   PENDING
   SELECTED
   REJECTED
+}
+
+enum SupportTicketStatus {
+  OPEN
+  ANSWERED
+  CLOSED
 }
 
 // VOICE Cash — 폐쇄형 포인트, 1 Cash = 1원, 플랫폼 안에서만 사용 (외부 이전/거래 불가).
@@ -190,6 +197,8 @@ model User {
   likes             Like[]
   commissionRequests CommissionRequest[]
   commissionOffers   CommissionOffer[]
+  supportTickets       SupportTicket[]
+  supportTicketReplies SupportTicketReply[]
 }
 
 model Track {
@@ -432,6 +441,32 @@ model CommissionRequest {
 
   offers CommissionOffer[]
   track  Track?
+}
+
+// 고객센터 — 사용자가 문의를 등록하면 관리자가 /admin/support에서 확인·답변하고,
+// 답변이 달리면 알림이 간다. 사용자가 다시 답장하면 CLOSED/ANSWERED 상태여도 OPEN으로
+// 재오픈되어(문의가 재개됨을 표시) 관리자 큐에 다시 노출된다.
+model SupportTicket {
+  id        String              @id @default(cuid())
+  userId    String
+  user      User                @relation(fields: [userId], references: [id])
+  subject   String
+  message   String
+  status    SupportTicketStatus @default(OPEN)
+  createdAt DateTime            @default(now())
+
+  replies SupportTicketReply[]
+}
+
+model SupportTicketReply {
+  id        String        @id @default(cuid())
+  ticketId  String
+  ticket    SupportTicket @relation(fields: [ticketId], references: [id])
+  authorId  String
+  author    User          @relation(fields: [authorId], references: [id])
+  message   String
+  isAdmin   Boolean       @default(false)
+  createdAt DateTime      @default(now())
 }
 
 model CommissionOffer {

@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { SiteHeader } from "@/components/layout/site-header";
+import { SiteFooter } from "@/components/layout/site-footer";
 import { Toaster } from "@/components/ui/sonner";
 import { SessionProvider } from "@/components/providers/session-provider";
 import { QueueProvider } from "@/components/player/queue-context";
@@ -38,6 +39,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <QueueProvider>
             <SiteHeader />
             <main className="flex-1">{children}</main>
+            <SiteFooter />
             <QueueBarSpacer />
             {/* 하단 큐 플레이어와 겹치지 않도록 토스트는 우상단에 표시 */}
             <Toaster position="top-right" />
