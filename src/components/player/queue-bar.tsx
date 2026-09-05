@@ -229,9 +229,9 @@ export function QueueExpandedView() {
         <div className="size-9" />
       </div>
 
-      <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col gap-8 overflow-hidden px-5 md:flex-row md:items-start">
-        <div className="mx-auto flex w-full max-w-xs shrink-0 flex-col md:mx-0 md:w-64">
-          <div className="mx-auto flex aspect-square w-full max-w-56 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-muted">
+      <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-8 overflow-hidden px-5 md:flex-row md:items-start">
+        <div className="mx-auto flex w-full max-w-xs shrink-0 flex-col md:mx-0 md:w-48">
+          <div className="mx-auto flex aspect-square w-full max-w-56 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-muted md:max-w-40">
             {currentTrack.thumbnailUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={currentTrack.thumbnailUrl} alt="" className="h-full w-full object-cover" />
