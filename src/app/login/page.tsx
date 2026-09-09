@@ -16,9 +16,9 @@ export default async function LoginPage({
   const { email, error } = await searchParams;
   // 데모 계정일 때만 비밀번호도 같이 채움 — 서버에서 렌더링되므로 클라이언트
   // JS/hydration이 실패해도(브라우저 확장 프로그램 등) 필드는 항상 채워진 채로 로드된다.
-  // 광석(실계정)은 다른 데모 계정과 비밀번호가 다르므로 계정별로 조회.
+  // 프로덕션에서는 절대 채우지 않음 — ?email= 쿼리로 아무 계정 비밀번호나 조회되는 걸 방지.
   const isDemoAccount = email && DEMO_ACCOUNTS.some((acc) => acc.email === email);
-  const prefillPassword = email && isDemoAccount ? demoPasswordFor(email) : "";
+  const prefillPassword = IS_DEV && email && isDemoAccount ? demoPasswordFor(email) : "";
 
   return (
     <div className="mx-auto max-w-sm px-5 py-16">

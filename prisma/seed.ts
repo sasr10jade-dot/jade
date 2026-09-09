@@ -15,9 +15,17 @@ import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
+function requiredEnv(name: string): string {
+  const value = process.env[name];
+  if (!value) {
+    throw new Error(`${name} must be set in .env before seeding (never hardcode credentials in source).`);
+  }
+  return value;
+}
+
 const DEMO_PASSWORD = "password1234";
-const CREATOR_EMAIL = "sasr10@naver.com";
-const CREATOR_PASSWORD = "kk101312!@";
+const CREATOR_EMAIL = requiredEnv("SEED_CREATOR_EMAIL");
+const CREATOR_PASSWORD = requiredEnv("SEED_CREATOR_PASSWORD");
 const DEMO_EMAILS: string[] = [
   "seoah@voicemap.test",
   "minji@voicemap.test",
