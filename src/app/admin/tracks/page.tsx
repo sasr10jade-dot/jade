@@ -1,14 +1,16 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { TrackRow } from "./track-row";
+import { AdminPagination, ADMIN_PAGE_SIZE, parsePage } from "@/components/admin/admin-pagination";
 
 export default async function AdminTracksPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; status?: string }>;
+  searchParams: Promise<{ q?: string; status?: string; page?: string }>;
 }) {
-  const { q, status } = await searchParams;
+  const { q, status, page: pageParam } = await searchParams;
   const query = (q ?? "").trim();
+  const page = parsePage(pageParam);
 
   const where: Prisma.TrackWhereInput = {};
   if (query) {
@@ -17,12 +19,15 @@ export default async function AdminTracksPage({
   if (status === "hidden_admin") where.removedByAdmin = true;
   if (status === "hidden_creator") where.removedByCreator = true;
 
-  const [tracks, totalCount] = await Promise.all([
+  const [tracks, matchedCount, totalCount] = await Promise.all([
     prisma.track.findMany({
       where,
       orderBy: { createdAt: "desc" },
       include: { creator: { select: { name: true, email: true } } },
+      take: ADMIN_PAGE_SIZE,
+      skip: (page - 1) * ADMIN_PAGE_SIZE,
     }),
+    prisma.track.count({ where }),
     prisma.track.count(),
   ]);
   const hasFilter = !!(query || status);
@@ -31,7 +36,7 @@ export default async function AdminTracksPage({
     <div>
       <h2 className="text-lg font-semibold">트랙 모더레이션</h2>
       <p className="mt-1 text-sm text-muted-foreground">
-        전체 {totalCount}건{hasFilter ? ` · 검색 결과 ${tracks.length}건` : ""} — 숨김 처리된 트랙은
+        전체 {totalCount}건{hasFilter ? ` · 검색 결과 ${matchedCount}건` : ""} — 숨김 처리된 트랙은
         Discover/구매에서 제외됩니다
       </p>
 
@@ -74,6 +79,13 @@ export default async function AdminTracksPage({
           ))}
         </div>
       )}
+
+      <AdminPagination
+        page={page}
+        totalCount={matchedCount}
+        baseHref="/admin/tracks"
+        searchParams={{ q, status }}
+      />
     </div>
   );
 }

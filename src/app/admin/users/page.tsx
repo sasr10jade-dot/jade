@@ -2,16 +2,18 @@ import type { Prisma } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { UserRow } from "./user-row";
+import { AdminPagination, ADMIN_PAGE_SIZE, parsePage } from "@/components/admin/admin-pagination";
 
 const ROLE_OPTIONS = ["CREATOR", "PERFORMER", "BUYER", "ADMIN"] as const;
 
 export default async function AdminUsersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; role?: string; suspended?: string }>;
+  searchParams: Promise<{ q?: string; role?: string; suspended?: string; page?: string }>;
 }) {
-  const { q, role, suspended } = await searchParams;
+  const { q, role, suspended, page: pageParam } = await searchParams;
   const query = (q ?? "").trim();
+  const page = parsePage(pageParam);
 
   const where: Prisma.UserWhereInput = {};
   if (query) {
@@ -20,9 +22,15 @@ export default async function AdminUsersPage({
   if (role) where.role = role as (typeof ROLE_OPTIONS)[number];
   if (suspended === "true") where.suspended = true;
 
-  const [session, users, totalCount] = await Promise.all([
+  const [session, users, matchedCount, totalCount] = await Promise.all([
     auth(),
-    prisma.user.findMany({ where, orderBy: { createdAt: "asc" } }),
+    prisma.user.findMany({
+      where,
+      orderBy: { createdAt: "asc" },
+      take: ADMIN_PAGE_SIZE,
+      skip: (page - 1) * ADMIN_PAGE_SIZE,
+    }),
+    prisma.user.count({ where }),
     prisma.user.count(),
   ]);
 
@@ -32,7 +40,7 @@ export default async function AdminUsersPage({
     <div>
       <h2 className="text-lg font-semibold">사용자 관리</h2>
       <p className="mt-1 text-sm text-muted-foreground">
-        전체 {totalCount}명{hasFilter ? ` · 검색 결과 ${users.length}건` : ""} — 역할 변경 및 계정 정지
+        전체 {totalCount}명{hasFilter ? ` · 검색 결과 ${matchedCount}건` : ""} — 역할 변경 및 계정 정지
       </p>
 
       <form action="/admin/users" method="GET" className="mt-4 flex flex-wrap items-center gap-2">
@@ -85,6 +93,13 @@ export default async function AdminUsersPage({
           ))}
         </div>
       )}
+
+      <AdminPagination
+        page={page}
+        totalCount={matchedCount}
+        baseHref="/admin/users"
+        searchParams={{ q, role, suspended }}
+      />
     </div>
   );
 }
