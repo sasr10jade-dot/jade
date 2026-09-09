@@ -13,7 +13,7 @@
   `src/app/globals.css`의 CSS 변수로 옮긴 것 — 근블랙 배경(`#0A0A0A`/`#111111`) +
   네온 라임 primary(`#7FFF00`), radius 1rem으로 기본 버튼이 필(pill) 형태가 되도록 설정.
   모든 shadcn 컴포넌트가 토큰만 참조하므로 이 파일 하나로 전체 앱 룩이 바뀝니다.
-- **Prisma** ORM — dev: SQLite(zero-config) / prod: PostgreSQL로 전환 예정
+- **Prisma** ORM — dev/prod 모두 PostgreSQL (Vercel 배포 대응, `postinstall`에서 `prisma generate` 자동 실행)
 - **Auth.js v5** — Credentials(이메일/비밀번호) + role(Creator/Performer/Buyer) 기반 접근 제어
 - **파일 업로드** — S3 presigned PUT, 미설정 시 로컬 디스크(`public/uploads`)로 자동 폴백
 - 토스페이먼츠 연동은 아직 미구현 (Roadmap 참고)
