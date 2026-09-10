@@ -245,7 +245,7 @@ export function QueueExpandedView() {
             <p className="truncate text-sm text-muted-foreground">{currentTrack.creatorName}</p>
           </div>
 
-          <AudioVisualizer active={isPlaying} className="mt-4 h-12 shrink-0" />
+          <AudioVisualizer active={isPlaying} className="mt-4 h-20 shrink-0" />
 
           <div className="mt-4 flex shrink-0 items-center gap-2">
             <span className="w-9 shrink-0 text-right text-[11px] text-muted-foreground">{formatTime(currentTime)}</span>

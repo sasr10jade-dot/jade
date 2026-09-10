@@ -1,18 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { extractPeaks, formatTime } from "@/lib/waveform";
+import { formatTime } from "@/lib/waveform";
 import { hashSeed, gradientAngle } from "@/lib/track-visual";
 import { useNativeAudioPlayer } from "@/lib/use-native-audio-player";
 import { AudioVisualizer } from "@/components/audio-visualizer";
 
-const BAR_COUNT = 64;
-
 // 원곡(트랙) 전체를 처음부터 끝까지 들을 수 있는 플레이어 — 가이드가 아직 없거나
 // 부족해도 Performer가 이 곡에 보컬을 제출할지 판단할 수 있어야 하므로 프리뷰 컷 없음.
 // 재생 엔진은 네이티브 <audio> + 전역 이퀄라이저(useNativeAudioPlayer/audio-engine.ts) —
-// 브라우저가 직접 관리하는 play/pause/timeupdate 이벤트를 그대로 신뢰. 파형은 여전히
-// 우리가 직접 디코딩해서 그림(재생 엔진과 무관하게 항상 필요).
+// 브라우저가 직접 관리하는 play/pause/timeupdate 이벤트를 그대로 신뢰.
 export function TrackPlayer({
   trackId,
   audioUrl,
@@ -25,24 +21,8 @@ export function TrackPlayer({
   thumbnailUrl?: string | null;
 }) {
   const player = useNativeAudioPlayer([audioUrl], trackId);
-  const [peaks, setPeaks] = useState<number[] | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    extractPeaks(audioUrl, BAR_COUNT)
-      .then((p) => {
-        if (!cancelled) setPeaks(p);
-      })
-      .catch(() => {
-        if (!cancelled) setPeaks([]);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [audioUrl]);
 
   const { isPlaying, currentTime, duration, error, audioRefCallbacks, togglePlay, seekTo } = player;
-  const progressFraction = duration > 0 ? currentTime / duration : 0;
   const seed = hashSeed(trackId);
   const angle = gradientAngle(seed);
 
@@ -98,60 +78,24 @@ export function TrackPlayer({
             )}
           </button>
           <div className="min-w-0 flex-1">
-            <div className="flex items-center justify-between gap-2">
-              <p className="truncate text-lg font-bold sm:text-xl">{title}</p>
-              <span className="shrink-0 text-xs text-muted-foreground">
-                {formatTime(currentTime)} / {formatTime(duration)}
-              </span>
-            </div>
+            <p className="truncate text-lg font-bold sm:text-xl">{title}</p>
           </div>
         </div>
 
-        <AudioVisualizer active={isPlaying} className="mt-4 h-10" />
+        <AudioVisualizer active={isPlaying} className="mt-4 h-16" />
 
-        <div
-          role="slider"
-          tabIndex={0}
-          aria-label="재생 위치"
-          aria-valuemin={0}
-          aria-valuemax={Math.max(1, Math.round(duration))}
-          aria-valuenow={Math.round(currentTime)}
-          aria-valuetext={`${formatTime(currentTime)} / ${formatTime(duration)}`}
-          className="mt-5 flex h-24 cursor-pointer items-end gap-[2px] rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring sm:h-28"
-          onClick={(e) => {
-            const rect = e.currentTarget.getBoundingClientRect();
-            seekTo((e.clientX - rect.left) / rect.width);
-          }}
-          onKeyDown={(e) => {
-            if (!duration) return;
-            if (e.key === "ArrowRight" || e.key === "ArrowUp") {
-              e.preventDefault();
-              seekTo(Math.min(1, (currentTime + 5) / duration));
-            } else if (e.key === "ArrowLeft" || e.key === "ArrowDown") {
-              e.preventDefault();
-              seekTo(Math.max(0, (currentTime - 5) / duration));
-            } else if (e.key === "Home") {
-              e.preventDefault();
-              seekTo(0);
-            } else if (e.key === "End") {
-              e.preventDefault();
-              seekTo(1);
-            }
-          }}
-        >
-          {(peaks ?? Array(BAR_COUNT).fill(0)).map((p, i) => {
-            const played = i / BAR_COUNT < progressFraction;
-            const heightPct = Math.max(8, Math.round(p * 100));
-            return (
-              <div
-                key={i}
-                className={`flex-1 rounded-full transition-colors ${
-                  played ? "bg-primary shadow-[0_0_8px_var(--primary)]" : "bg-foreground/20"
-                }`}
-                style={{ height: `${heightPct}%` }}
-              />
-            );
-          })}
+        <div className="mt-5 flex items-center gap-2">
+          <span className="w-9 shrink-0 text-right text-[11px] text-muted-foreground">{formatTime(currentTime)}</span>
+          <input
+            type="range"
+            min={0}
+            max={duration || 0}
+            value={Math.min(currentTime, duration || 0)}
+            onChange={(e) => seekTo(Number(e.target.value) / (duration || 1))}
+            aria-label="재생 위치"
+            className="h-1 flex-1 accent-primary"
+          />
+          <span className="w-9 shrink-0 text-[11px] text-muted-foreground">{formatTime(duration)}</span>
         </div>
         {error && <p className="mt-3 text-xs text-destructive">{error}</p>}
       </div>
