@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useRef, useState } from "react";
-import { claimPlayback } from "@/lib/now-playing";
+import { claimPlayback, isAbortError } from "@/lib/now-playing";
 import { pingTrackPlay } from "@/lib/waveform";
 import { audioEngine } from "@/lib/audio-engine";
 
@@ -111,7 +111,9 @@ export function QueueProvider({ children }: { children: React.ReactNode }) {
         audioEngine.connect(el);
         audioEngine.resume();
       })
-      .catch(() => setIsPlaying(false));
+      .catch((e) => {
+        if (!isAbortError(e)) setIsPlaying(false);
+      });
   }
 
   function playQueue(tracks: QueueTrack[], startIndex: number) {

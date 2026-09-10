@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { audioEngine } from "@/lib/audio-engine";
 import { pingTrackPlay } from "@/lib/waveform";
-import { claimPlayback } from "@/lib/now-playing";
+import { claimPlayback, isAbortError } from "@/lib/now-playing";
 
 // Howler(html5:true) + 커스텀 rAF 루프 + isPlayingRef 워크어라운드를 대체 — 네이티브
 // <audio> 엘리먼트의 play/pause/timeupdate/ended 이벤트를 그대로 신뢰한다.
@@ -118,6 +118,9 @@ export function useNativeAudioPlayer(urls: string[], trackId?: string) {
     try {
       await el.play();
     } catch (e) {
+      // 재생 도중 다른 트랙으로 전환되는 등 새 load/pause가 끼어들면 브라우저가 이전
+      // play() 요청을 AbortError로 정상 취소한다 — 실제 실패가 아니므로 무시.
+      if (isAbortError(e)) return;
       console.error("[VOICEMAP] 재생 실패:", e);
       setError(e instanceof Error ? `재생 실패: ${e.message}` : "재생에 실패했습니다");
       return;
@@ -167,6 +170,7 @@ export function useNativeAudioPlayer(urls: string[], trackId?: string) {
       try {
         await to.play();
       } catch (e) {
+        if (isAbortError(e)) return;
         console.error("[VOICEMAP] 전환 후 재생 실패:", e);
         setError(e instanceof Error ? `재생 실패: ${e.message}` : "재생에 실패했습니다");
         return;

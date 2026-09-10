@@ -8,3 +8,9 @@ export function claimPlayback(stop: () => void) {
   if (currentStopper && currentStopper !== stop) currentStopper();
   currentStopper = stop;
 }
+
+// 트랙을 빠르게 연속 전환하면 이전 el.play() 프라미스가 새 load/pause에 의해 정상적으로
+// "중단"되어 AbortError로 reject된다 — 실제 재생 실패가 아니므로 에러 상태로 취급하면 안 됨.
+export function isAbortError(e: unknown): boolean {
+  return e instanceof DOMException && e.name === "AbortError";
+}
