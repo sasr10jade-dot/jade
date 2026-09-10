@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
 import { ThumbnailUploader } from "@/components/thumbnail-uploader";
+import { uploadFileToStorage } from "@/lib/upload-client";
 
 const MAX_SIZE_MB = 300;
 const ALLOWED_TYPES = ["audio/wav", "audio/x-wav", "audio/mpeg"];
@@ -53,28 +54,7 @@ export function DeliverForm({ requestId, defaultTitle }: { requestId: string; de
     setState("uploading");
     setProgress(0);
     try {
-      const presignRes = await fetch("/api/uploads/presign", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ filename: file.name, contentType: file.type, size: file.size }),
-      });
-      if (!presignRes.ok) {
-        const data = await presignRes.json().catch(() => ({}));
-        throw new Error(data.error ?? "업로드 URL 발급에 실패했습니다");
-      }
-      const { uploadUrl, fileUrl } = await presignRes.json();
-
-      await new Promise<void>((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        xhr.open("PUT", uploadUrl);
-        xhr.setRequestHeader("Content-Type", file.type);
-        xhr.upload.onprogress = (e) => {
-          if (e.lengthComputable) setProgress(Math.round((e.loaded / e.total) * 100));
-        };
-        xhr.onload = () => (xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error(`업로드 실패 (${xhr.status})`)));
-        xhr.onerror = () => reject(new Error("업로드 중 네트워크 오류가 발생했습니다"));
-        xhr.send(file);
-      });
+      const fileUrl = await uploadFileToStorage(file, "track", setProgress);
 
       setState("creating");
       const res = await fetch(`/api/commissions/${requestId}/deliver`, {

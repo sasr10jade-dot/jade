@@ -2,6 +2,7 @@
 
 import { useId, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { uploadFileToStorage } from "@/lib/upload-client";
 
 const ALLOWED_TYPES = ["application/pdf", "image/jpeg", "image/png"];
 const MAX_SIZE_MB = 20;
@@ -34,29 +35,7 @@ export function SheetMusicUploader({
 
     setUploading(true);
     try {
-      const presignRes = await fetch("/api/uploads/presign", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          filename: file.name,
-          contentType: file.type,
-          size: file.size,
-          purpose: "sheet_music",
-        }),
-      });
-      if (!presignRes.ok) {
-        const data = await presignRes.json().catch(() => ({}));
-        throw new Error(data.error ?? "업로드 URL 발급에 실패했습니다");
-      }
-      const { uploadUrl, fileUrl } = await presignRes.json();
-
-      const putRes = await fetch(uploadUrl, {
-        method: "PUT",
-        headers: { "Content-Type": file.type },
-        body: file,
-      });
-      if (!putRes.ok) throw new Error(`업로드 실패 (${putRes.status})`);
-
+      const fileUrl = await uploadFileToStorage(file, "sheet_music");
       setUrl(fileUrl);
       setFilename(file.name);
       onUploaded(fileUrl);

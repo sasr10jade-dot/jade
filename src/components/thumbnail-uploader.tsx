@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useState } from "react";
+import { uploadFileToStorage } from "@/lib/upload-client";
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const MAX_SIZE_MB = 5;
@@ -36,29 +37,7 @@ export function ThumbnailUploader({
     setPreview(URL.createObjectURL(file));
     setUploading(true);
     try {
-      const presignRes = await fetch("/api/uploads/presign", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          filename: file.name,
-          contentType: file.type,
-          size: file.size,
-          purpose: "thumbnail",
-        }),
-      });
-      if (!presignRes.ok) {
-        const data = await presignRes.json().catch(() => ({}));
-        throw new Error(data.error ?? "업로드 URL 발급에 실패했습니다");
-      }
-      const { uploadUrl, fileUrl } = await presignRes.json();
-
-      const putRes = await fetch(uploadUrl, {
-        method: "PUT",
-        headers: { "Content-Type": file.type },
-        body: file,
-      });
-      if (!putRes.ok) throw new Error(`업로드 실패 (${putRes.status})`);
-
+      const fileUrl = await uploadFileToStorage(file, "thumbnail");
       onUploaded(fileUrl);
     } catch (e) {
       setError(e instanceof Error ? e.message : "업로드 중 오류가 발생했습니다");

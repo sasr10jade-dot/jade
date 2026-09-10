@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { ThumbnailUploader } from "@/components/thumbnail-uploader";
 import { SheetMusicUploader } from "@/components/sheet-music-uploader";
+import { uploadFileToStorage } from "@/lib/upload-client";
 
 const SUGGESTED_TAGS = ["발라드", "무드: 잔잔한", "여성보컬 추천"];
 const MAX_SIZE_MB = 300;
@@ -63,22 +64,7 @@ export function UploadForm() {
     setState("uploading");
     setProgress(0);
     try {
-      const presignRes = await fetch("/api/uploads/presign", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          filename: file.name,
-          contentType: file.type,
-          size: file.size,
-        }),
-      });
-      if (!presignRes.ok) {
-        const data = await presignRes.json().catch(() => ({}));
-        throw new Error(data.error ?? "업로드 URL 발급에 실패했습니다");
-      }
-      const { uploadUrl, fileUrl } = await presignRes.json();
-
-      await uploadWithProgress(uploadUrl, file, setProgress);
+      const fileUrl = await uploadFileToStorage(file, "track", setProgress);
 
       setState("creating");
       const trackRes = await fetch("/api/tracks", {
@@ -240,25 +226,4 @@ export function UploadForm() {
       </div>
     </div>
   );
-}
-
-function uploadWithProgress(
-  url: string,
-  file: File,
-  onProgress: (pct: number) => void
-) {
-  return new Promise<void>((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
-    xhr.open("PUT", url);
-    xhr.setRequestHeader("Content-Type", file.type);
-    xhr.upload.onprogress = (e) => {
-      if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
-    };
-    xhr.onload = () => {
-      if (xhr.status >= 200 && xhr.status < 300) resolve();
-      else reject(new Error(`업로드 실패 (${xhr.status})`));
-    };
-    xhr.onerror = () => reject(new Error("업로드 중 네트워크 오류가 발생했습니다"));
-    xhr.send(file);
-  });
 }
