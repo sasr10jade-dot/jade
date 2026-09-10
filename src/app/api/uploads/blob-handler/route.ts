@@ -22,7 +22,7 @@ export async function POST(req: Request) {
       onBeforeGenerateToken: async (_pathname, clientPayload) => {
         const purpose = (clientPayload as UploadPurpose | null) ?? "track";
         const requiredRole = REQUIRED_ROLE[purpose];
-        if (session.user!.role !== requiredRole) {
+        if (session.user!.role !== requiredRole && session.user!.role !== "ADMIN") {
           throw new Error(`${requiredRole}만 업로드할 수 있습니다`);
         }
 

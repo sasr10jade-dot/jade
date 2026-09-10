@@ -56,7 +56,7 @@ export async function POST(req: Request) {
   });
 
   if (!track.thumbnailUrl) {
-    const thumbnailUrl = generateFallbackThumbnail(track.id, track.title);
+    const thumbnailUrl = await generateFallbackThumbnail(track.id, track.title);
     await prisma.track.update({ where: { id: track.id }, data: { thumbnailUrl } });
     track.thumbnailUrl = thumbnailUrl;
   }

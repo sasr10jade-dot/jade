@@ -14,7 +14,7 @@ async function main() {
   console.log(`${tracks.length}개 트랙에 썸네일이 없습니다. 생성을 시작합니다...`);
 
   for (const track of tracks) {
-    const url = generateFallbackThumbnail(track.id, track.title);
+    const url = await generateFallbackThumbnail(track.id, track.title);
     await prisma.track.update({ where: { id: track.id }, data: { thumbnailUrl: url } });
     console.log(`  ✓ ${track.title} -> ${url}`);
   }

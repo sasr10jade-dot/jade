@@ -1,13 +1,11 @@
-import { writeFileSync, mkdirSync } from "fs";
-import { join } from "path";
 import { hashSeed, decorativeBars, gradientAngle } from "@/lib/track-visual";
+import { putObject } from "@/lib/storage";
 
 // globals.css --accent / --secondary / --primary — SVG는 <img>로 로드되는 별도 문서라
 // CSS 커스텀 프로퍼티를 상속받지 못하므로 실제 테마 색상을 그대로 하드코딩.
 const ACCENT = "#1f2a0d";
 const SECONDARY = "#1a1a1a";
 const PRIMARY = "#7fff00";
-const OUT_DIR = join(process.cwd(), "public", "uploads", "thumbnails");
 
 function svgFor(id: string, title: string) {
   const seed = hashSeed(id);
@@ -46,9 +44,9 @@ function svgFor(id: string, title: string) {
 // 크리에이터가 커버 이미지를 직접 올리지 않은 트랙에 카드 UI 그라데이션 폴백과 동일한
 // 룩의 SVG를 실제 파일로 구워 등록 — /api/tracks, /api/commissions/[id]/deliver 양쪽에서
 // "썸네일 없이 생성 완료된" 트랙이 남지 않도록 생성 시점에 바로 호출한다.
-export function generateFallbackThumbnail(trackId: string, title: string): string {
-  mkdirSync(OUT_DIR, { recursive: true });
-  const filename = `${trackId}.svg`;
-  writeFileSync(join(OUT_DIR, filename), svgFor(trackId, title), "utf-8");
-  return `/uploads/thumbnails/${filename}`;
+// putObject를 통해 활성 스토리지 백엔드(Vercel Blob 등)에 직접 쓴다 — 서버리스 배포는
+// 디스크가 휘발성이라 로컬 fs에 직접 쓰면 배포 후 파일이 사라진다.
+export async function generateFallbackThumbnail(trackId: string, title: string): Promise<string> {
+  const key = `thumbnails/${trackId}.svg`;
+  return putObject(key, Buffer.from(svgFor(trackId, title), "utf-8"), "image/svg+xml");
 }

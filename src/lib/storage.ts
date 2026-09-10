@@ -1,6 +1,9 @@
 import { randomUUID } from "crypto";
+import { writeFile, mkdir } from "fs/promises";
+import { join } from "path";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { put as putBlob } from "@vercel/blob";
 
 /**
  * Track file storage (FR-01). Three backends behind one interface:
@@ -85,6 +88,35 @@ export async function createPresignedUpload(
   const uploadUrl = `/api/uploads/local?key=${encodeURIComponent(key)}`;
   const fileUrl = `/uploads/${key}`;
   return { backend: "local", uploadUrl, fileUrl, key };
+}
+
+/**
+ * Server-generated files (e.g. generate-thumbnail.ts's SVG fallback covers) don't go
+ * through the client-upload dance above — they're produced inside a route handler that
+ * already has the bytes in memory, so they write straight to whichever backend is
+ * active. Bypasses the public-facing content-type allowlists in purposeLimits() since
+ * this is trusted server-generated content, not a user upload.
+ */
+export async function putObject(key: string, data: Buffer, contentType: string): Promise<string> {
+  if (isVercelBlobConfigured()) {
+    const blob = await putBlob(key, data, { access: "public", contentType, addRandomSuffix: false });
+    return blob.url;
+  }
+
+  if (isS3Configured()) {
+    const client = s3Client();
+    await client.send(
+      new PutObjectCommand({ Bucket: process.env.S3_BUCKET!, Key: key, Body: data, ContentType: contentType })
+    );
+    return process.env.S3_PUBLIC_URL
+      ? `${process.env.S3_PUBLIC_URL.replace(/\/$/, "")}/${key}`
+      : `https://${process.env.S3_BUCKET}.s3.${process.env.S3_REGION}.amazonaws.com/${key}`;
+  }
+
+  const path = join(process.cwd(), "public", "uploads", key);
+  await mkdir(join(path, ".."), { recursive: true });
+  await writeFile(path, data);
+  return `/uploads/${key}`;
 }
 
 // 300MB cap — FR-01 / EC-01.

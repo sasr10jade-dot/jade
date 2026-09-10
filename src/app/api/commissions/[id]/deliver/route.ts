@@ -82,12 +82,6 @@ export async function POST(
       include: { licenses: true },
     });
 
-    if (!track.thumbnailUrl) {
-      const thumbnailUrl = generateFallbackThumbnail(track.id, track.title);
-      await tx.track.update({ where: { id: track.id }, data: { thumbnailUrl } });
-      track.thumbnailUrl = thumbnailUrl;
-    }
-
     const order = await createOrderAtPrice(tx, {
       trackId: track.id,
       trackTitle: track.title,
@@ -112,6 +106,15 @@ export async function POST(
 
     return { track, order };
   });
+
+  // Blob/S3 상대로 네트워크 I/O가 걸리는 작업이라 위 DB 트랜잭션 밖에서 실행 —
+  // $transaction 안에서 하면 커밋이 끝날 때까지 DB 트랜잭션이 열려 있게 되어
+  // 타임아웃/락 유지 시간이 늘어난다.
+  if (!result.track.thumbnailUrl) {
+    const thumbnailUrl = await generateFallbackThumbnail(result.track.id, result.track.title);
+    await prisma.track.update({ where: { id: result.track.id }, data: { thumbnailUrl } });
+    result.track.thumbnailUrl = thumbnailUrl;
+  }
 
   return NextResponse.json(result, { status: 201 });
 }
