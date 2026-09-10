@@ -77,10 +77,10 @@ export function GuideComparisonPlayer({
 
   return (
     <div className="relative overflow-hidden rounded-2xl border border-border bg-card">
-      <audio ref={audioRefCallbacks[0]} src={guides[0].audioUrl} preload="metadata" className="hidden" />
+      <audio ref={audioRefCallbacks[0]} src={guides[0].audioUrl} preload="metadata" crossOrigin="anonymous" className="hidden" />
       {/* eslint-disable-next-line react-hooks/refs -- track-player.tsx 참고: useMemo로 만든 안정적인
           콜백 함수 값이라 렌더 중 ref.current 접근이 아님(오탐). */}
-      <audio ref={audioRefCallbacks[1]} src={guides[1].audioUrl} preload="metadata" className="hidden" />
+      <audio ref={audioRefCallbacks[1]} src={guides[1].audioUrl} preload="metadata" crossOrigin="anonymous" className="hidden" />
       <div
         aria-hidden
         className={`absolute inset-0 scale-125 transition-opacity duration-700 ${isPlaying ? "opacity-100" : "opacity-50"}`}

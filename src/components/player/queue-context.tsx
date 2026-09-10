@@ -225,6 +225,7 @@ export function QueueProvider({ children }: { children: React.ReactNode }) {
       {children}
       <audio
         ref={audioRef}
+        crossOrigin="anonymous"
         className="hidden"
         onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
         onLoadedMetadata={(e) => setDuration(e.currentTarget.duration || 0)}

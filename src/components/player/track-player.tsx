@@ -53,7 +53,7 @@ export function TrackPlayer({
       {/* eslint-disable-next-line react-hooks/refs -- audioRefCallbacks[0]은 useMemo로 만든 안정적인
           콜백 함수 값이지 ref.current 자체가 아님. React가 커밋 단계에서 나중에 호출할 뿐 렌더 중엔
           아무것도 읽거나 쓰지 않아 규칙이 우려하는 상황(렌더 중 ref 접근)이 아님 — 오탐. */}
-      <audio ref={audioRefCallbacks[0]} src={audioUrl} preload="metadata" className="hidden" />
+      <audio ref={audioRefCallbacks[0]} src={audioUrl} preload="metadata" crossOrigin="anonymous" className="hidden" />
 
       {/* 블러 처리된 배경 — 앨범 아트가 있으면 그걸, 없으면 트랙 id 기반 그라데이션을 확대해서
           깔아 재생 중일 때 더 또렷해지도록(opacity) 해 "지금 듣고 있다"는 느낌을 준다. */}
