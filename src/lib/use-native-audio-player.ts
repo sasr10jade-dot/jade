@@ -81,6 +81,9 @@ export function useNativeAudioPlayer(urls: string[], trackId?: string) {
       el.addEventListener("pause", onPause);
       el.addEventListener("ended", onEnded);
       el.addEventListener("error", onError);
+      // 브라우저 캐시 등으로 이 effect가 붙기 전에 메타데이터가 이미 로드돼 있으면
+      // loadedmetadata가 다시 발생하지 않아 duration이 영영 0으로 남는다 — 즉시 확인.
+      if (el.readyState >= 1) onLoaded();
       cleanups.push(() => {
         el.removeEventListener("loadedmetadata", onLoaded);
         el.removeEventListener("timeupdate", onTimeUpdate);
