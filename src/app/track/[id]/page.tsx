@@ -191,39 +191,51 @@ export default async function TrackDetailPage({
         </>
       )}
 
-      <h2 className="mt-10 text-lg font-semibold">가이드 비교</h2>
+      <h2 className="mt-10 text-lg font-semibold">{guideB ? "가이드 비교" : "가이드"}</h2>
       <p className="text-sm text-muted-foreground">
-        동일 구간 A/B 전환, 파형 표시 — 구매 전 전곡 청취 가능
+        {guideB ? "동일 구간 A/B 전환, 파형 표시 — 구매 전 전곡 청취 가능" : "구매 전 전곡 청취 가능"}
       </p>
 
       <div className="mt-4">
-        {guideA && guideB ? (
+        {guideA ? (
           <GuideComparisonPlayer
             trackId={track.id}
             thumbnailUrl={track.thumbnailUrl}
-            guides={[
-              {
-                id: guideA.id,
-                label: "가이드 A",
-                performer: guideA.performer.name,
-                // Split.splitAsk is the Performer's proposed share; display convention is
-                // "Creator / Performer" throughout (matches PRD Section 5 default 80/20).
-                splitAsk: `${100 - Math.round(guideA.splitAsk)} / ${Math.round(guideA.splitAsk)}`,
-                audioUrl: guideA.audioUrl,
-              },
-              {
-                id: guideB.id,
-                label: "가이드 B",
-                performer: guideB.performer.name,
-                splitAsk: `${100 - Math.round(guideB.splitAsk)} / ${Math.round(guideB.splitAsk)}`,
-                audioUrl: guideB.audioUrl,
-              },
-            ]}
+            guides={
+              guideB
+                ? [
+                    {
+                      id: guideA.id,
+                      label: "가이드 A",
+                      performer: guideA.performer.name,
+                      // Split.splitAsk is the Performer's proposed share; display convention is
+                      // "Creator / Performer" throughout (matches PRD Section 5 default 80/20).
+                      splitAsk: `${100 - Math.round(guideA.splitAsk)} / ${Math.round(guideA.splitAsk)}`,
+                      audioUrl: guideA.audioUrl,
+                    },
+                    {
+                      id: guideB.id,
+                      label: "가이드 B",
+                      performer: guideB.performer.name,
+                      splitAsk: `${100 - Math.round(guideB.splitAsk)} / ${Math.round(guideB.splitAsk)}`,
+                      audioUrl: guideB.audioUrl,
+                    },
+                  ]
+                : [
+                    {
+                      id: guideA.id,
+                      label: "가이드",
+                      performer: guideA.performer.name,
+                      splitAsk: `${100 - Math.round(guideA.splitAsk)} / ${Math.round(guideA.splitAsk)}`,
+                      audioUrl: guideA.audioUrl,
+                    },
+                  ]
+            }
             // 바이어도 구매 결정을 위해 전곡을 들을 수 있어야 하므로 프리뷰 제한 없음.
           />
         ) : (
           <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
-            비교할 가이드가 아직 2개 미만입니다. (제출된 가이드: {track.guides.length}건)
+            아직 제출된 가이드가 없습니다.
           </p>
         )}
       </div>

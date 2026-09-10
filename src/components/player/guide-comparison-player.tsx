@@ -18,8 +18,9 @@ export interface GuideOption {
 // 동일 구간 A/B 전환, 파형 표시, 30초 프리뷰 제한(바이어만 — Performer/Creator는 전곡
 // 청취 가능해야 어떤 곡에 가이드를 제출할지 판단할 수 있다).
 //
-// 재생 엔진은 네이티브 <audio> + 전역 이퀄라이저(useNativeAudioPlayer) — 두 가이드 모두
-// 미리 별도의 <audio> 엘리먼트로 준비해두고, switchTo()로 재생 위치만 맞춰서 즉시 바꿔 끼운다.
+// 가이드가 1건뿐이면 비교 UI(A/B 전환 버튼, 두 번째 <audio>) 없이 단일 플레이어로 동작 —
+// 재생 엔진은 네이티브 <audio> + 전역 이퀄라이저(useNativeAudioPlayer) — 준비된 가이드
+// 전부 미리 별도의 <audio> 엘리먼트로 준비해두고, switchTo()로 재생 위치만 맞춰서 즉시 바꿔 끼운다.
 const PREVIEW_SECONDS = 30;
 const BAR_COUNT = 64;
 
@@ -30,17 +31,18 @@ export function GuideComparisonPlayer({
   thumbnailUrl,
 }: {
   trackId: string;
-  guides: [GuideOption, GuideOption];
+  guides: [GuideOption] | [GuideOption, GuideOption];
   previewOnly?: boolean;
   thumbnailUrl?: string | null;
 }) {
   const player = useNativeAudioPlayer(
-    [guides[0].audioUrl, guides[1].audioUrl],
+    guides.map((g) => g.audioUrl),
     trackId
   );
   const { activeIndex, isPlaying, currentTime, duration, error, audioRefCallbacks, togglePlay, pause, seekTo, seekToSeconds, switchTo } = player;
 
   const [peaksByGuide, setPeaksByGuide] = useState<Record<string, number[]>>({});
+  const guideIdsKey = guides.map((g) => g.id).join("|");
 
   useEffect(() => {
     let cancelled = false;
@@ -57,7 +59,7 @@ export function GuideComparisonPlayer({
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [guides[0].id, guides[1].id]);
+  }, [guideIdsKey]);
 
   // 30초 프리뷰 컷오프 — 재생 위치가 넘어가면 즉시 정지하고 정확히 30초 지점으로 고정.
   useEffect(() => {
@@ -78,9 +80,10 @@ export function GuideComparisonPlayer({
   return (
     <div className="relative overflow-hidden rounded-2xl border border-border bg-card">
       <audio ref={audioRefCallbacks[0]} src={guides[0].audioUrl} preload="metadata" crossOrigin="anonymous" className="hidden" />
-      {/* eslint-disable-next-line react-hooks/refs -- track-player.tsx 참고: useMemo로 만든 안정적인
-          콜백 함수 값이라 렌더 중 ref.current 접근이 아님(오탐). */}
-      <audio ref={audioRefCallbacks[1]} src={guides[1].audioUrl} preload="metadata" crossOrigin="anonymous" className="hidden" />
+      {guides[1] && (
+        // eslint-disable-next-line react-hooks/refs -- track-player.tsx 참고: useMemo로 만든 안정적인 콜백 함수 값이라 렌더 중 ref.current 접근이 아님(오탐).
+        <audio ref={audioRefCallbacks[1]} src={guides[1].audioUrl} preload="metadata" crossOrigin="anonymous" className="hidden" />
+      )}
       <div
         aria-hidden
         className={`absolute inset-0 scale-125 transition-opacity duration-700 ${isPlaying ? "opacity-100" : "opacity-50"}`}
@@ -182,19 +185,21 @@ export function GuideComparisonPlayer({
         </div>
 
         <div className="mt-4 flex items-center justify-between">
-          <div className="flex gap-2">
-            {guides.map((g, i) => (
-              <Button
-                key={g.id}
-                size="sm"
-                variant={i === activeIndex ? "default" : "outline"}
-                onClick={() => switchTo(i)}
-              >
-                {i === 0 ? "A로 전환" : "B로 전환"}
-              </Button>
-            ))}
-          </div>
-          <span className="text-xs font-medium text-muted-foreground">
+          {guides.length > 1 && (
+            <div className="flex gap-2">
+              {guides.map((g, i) => (
+                <Button
+                  key={g.id}
+                  size="sm"
+                  variant={i === activeIndex ? "default" : "outline"}
+                  onClick={() => switchTo(i)}
+                >
+                  {i === 0 ? "A로 전환" : "B로 전환"}
+                </Button>
+              ))}
+            </div>
+          )}
+          <span className="ml-auto text-xs font-medium text-muted-foreground">
             제안 Split {active.splitAsk}
           </span>
         </div>
