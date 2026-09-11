@@ -196,6 +196,7 @@ model User {
   following         Follow[]             @relation("Following")
   followers         Follow[]             @relation("Followers")
   likes             Like[]
+  reportsSubmitted  Report[]
   commissionRequests CommissionRequest[]
   commissionOffers   CommissionOffer[]
   supportTickets       SupportTicket[]
@@ -233,6 +234,7 @@ model Track {
   offers    PriceOffer[]
   reviews   Review[]
   likes     Like[]
+  reports   Report[]
   playEvents PlayEvent[]
 
   commissionRequestId String?            @unique // 이 트랙이 곡 의뢰 납품물이면 해당 CommissionRequest
@@ -420,6 +422,29 @@ model Like {
   @@unique([userId, trackId])
 }
 
+enum ReportStatus {
+  OPEN
+  RESOLVED
+  DISMISSED
+}
+
+// 로그인한 사용자 누구나 트랙을 신고 — 관리자가 /admin/reports 큐에서 처리(트랙 숨김은
+// 여전히 /admin/tracks에서 별도로, 신고 처리 자체가 자동으로 숨기지 않음). 사용자당
+// 트랙당 신고 1건만(중복 신고 방지) — Like/Follow와 동일한 @@unique 패턴.
+model Report {
+  id         String       @id @default(cuid())
+  reporterId String
+  reporter   User         @relation(fields: [reporterId], references: [id])
+  trackId    String
+  track      Track        @relation(fields: [trackId], references: [id])
+  reason     String
+  status     ReportStatus @default(OPEN)
+  createdAt  DateTime     @default(now())
+  resolvedAt DateTime?
+
+  @@unique([reporterId, trackId])
+}
+
 // 곡 의뢰 — 기존 흐름(크리에이터가 곡을 먼저 올림)과 반대로, 구매자가 원하는 조건을
 // 먼저 올리면 크리에이터들이 가격/메시지로 지원(CommissionOffer)하는 역방향 매칭.
 // 구매자가 지원을 선정(MATCHED)하면 해당 크리에이터만 납품(Track 업로드)할 수 있고,
@@ -502,6 +527,7 @@ enum AdminAction {
   TRACK_VISIBILITY_CHANGED
   ORDER_DISPUTE_RESOLVED
   SETTLEMENT_PAID
+  REPORT_RESOLVED
 }
 
 // 관리자 작업 감사 로그 — 누가/언제/무엇을 바꿨는지 기록. targetType/targetId는 Prisma가

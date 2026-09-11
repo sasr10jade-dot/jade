@@ -29,12 +29,19 @@ export default async function AdminTrackDetailPage({
   });
   if (!track) notFound();
 
-  const adminActions = await prisma.adminActionLog.findMany({
-    where: { targetType: "TRACK", targetId: id },
-    orderBy: { createdAt: "desc" },
-    take: 20,
-    include: { actor: { select: { name: true } } },
-  });
+  const [adminActions, reports] = await Promise.all([
+    prisma.adminActionLog.findMany({
+      where: { targetType: "TRACK", targetId: id },
+      orderBy: { createdAt: "desc" },
+      take: 20,
+      include: { actor: { select: { name: true } } },
+    }),
+    prisma.report.findMany({
+      where: { trackId: id },
+      orderBy: { createdAt: "desc" },
+      include: { reporter: { select: { name: true } } },
+    }),
+  ]);
 
   return (
     <div>
@@ -131,6 +138,25 @@ export default async function AdminTrackDetailPage({
               </span>
               <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">{r.comment}</span>
               <span className="text-xs text-muted-foreground">{r.author.name}</span>
+            </Row>
+          ))
+        )}
+      </Section>
+
+      <Section title={`신고 내역 (${reports.length}건)`}>
+        {reports.length === 0 ? (
+          <Empty />
+        ) : (
+          reports.map((r) => (
+            <Row key={r.id}>
+              <span className="min-w-0 flex-1 text-xs text-muted-foreground">
+                {r.createdAt.toLocaleString("ko-KR")}
+              </span>
+              <span className="text-xs text-muted-foreground">신고자 {r.reporter.name}</span>
+              <span className="min-w-0 flex-1 truncate">{r.reason}</span>
+              <Badge variant={r.status === "OPEN" ? "destructive" : "outline"}>
+                {r.status === "OPEN" ? "대기" : r.status === "RESOLVED" ? "처리완료" : "기각"}
+              </Badge>
             </Row>
           ))
         )}

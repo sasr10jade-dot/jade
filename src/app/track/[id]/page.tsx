@@ -9,6 +9,7 @@ import { GuideSubmitForm } from "./guide-submit-form";
 import { SplitProposeForm } from "./split-propose-form";
 import { PriceOfferSection } from "./price-offer-section";
 import { LikeButton } from "./like-button";
+import { ReportButton } from "./report-button";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { formatKRW } from "@/lib/format";
@@ -46,6 +47,15 @@ export default async function TrackDetailPage({
     ? Boolean(
         await prisma.like.findUnique({
           where: { userId_trackId: { userId: session.user.id, trackId: track.id } },
+          select: { id: true },
+        })
+      )
+    : false;
+
+  const reportedByMe = session?.user
+    ? Boolean(
+        await prisma.report.findUnique({
+          where: { reporterId_trackId: { reporterId: session.user.id, trackId: track.id } },
           select: { id: true },
         })
       )
@@ -108,7 +118,10 @@ export default async function TrackDetailPage({
         </div>
         <div className="flex shrink-0 items-center gap-2">
           {session?.user && (
-            <LikeButton trackId={track.id} initialLiked={likedByMe} initialCount={track._count.likes} />
+            <>
+              <LikeButton trackId={track.id} initialLiked={likedByMe} initialCount={track._count.likes} />
+              <ReportButton trackId={track.id} initialReported={reportedByMe} />
+            </>
           )}
           <Link href={`/checkout/${track.id}`}>
             <Button>구매하기 →</Button>

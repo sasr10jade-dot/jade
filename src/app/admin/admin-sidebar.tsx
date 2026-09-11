@@ -17,6 +17,7 @@ const ADMIN_NAV_GROUPS: {
     items: [
       { href: "/admin/users", label: "사용자" },
       { href: "/admin/tracks", label: "트랙 모더레이션" },
+      { href: "/admin/reports", label: "신고", badgeKey: "reports" },
       { href: "/admin/activity", label: "활동 로그" },
     ],
   },

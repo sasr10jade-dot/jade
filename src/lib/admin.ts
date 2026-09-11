@@ -17,7 +17,7 @@ export async function requireAdmin() {
 type AdminActionInput = {
   actorId: string;
   action: AdminAction;
-  targetType: "USER" | "TRACK" | "ORDER" | "SETTLEMENT";
+  targetType: "USER" | "TRACK" | "ORDER" | "SETTLEMENT" | "REPORT";
   targetId: string;
   metadata?: Prisma.InputJsonValue;
 };
@@ -37,6 +37,7 @@ export const ADMIN_ACTION_LABEL: Record<string, string> = {
   TRACK_VISIBILITY_CHANGED: "트랙 노출 상태 변경",
   ORDER_DISPUTE_RESOLVED: "주문 분쟁 처리",
   SETTLEMENT_PAID: "정산 지급 완료",
+  REPORT_RESOLVED: "신고 처리",
 };
 
 // AdminActionLog.metadata는 Json이라 스키마가 없음 — TRACK_VISIBILITY_CHANGED만 선택적으로
