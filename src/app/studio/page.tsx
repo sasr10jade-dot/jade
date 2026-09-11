@@ -151,7 +151,7 @@ export default async function StudioPage() {
               <span className="font-semibold">{t.title}</span>
               <div className="flex items-center gap-3 text-sm text-muted-foreground">
                 <span>
-                  가이드 {t._count.guides}건 · 판매 {t._count.orders}건
+                  {t.genre ?? "장르 미정"} · 가이드 {t._count.guides}건 · 판매 {t._count.orders}건
                 </span>
                 {t.removedByCreator && <Badge variant="destructive">비공개</Badge>}
                 <Badge variant="outline">{STATUS_LABEL[t.status] ?? t.status}</Badge>
