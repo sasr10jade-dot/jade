@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { prisma } from "@/lib/prisma";
 import { formatKRW } from "@/lib/format";
 import { displayName } from "@/lib/display-name";
+import { AdminPagination, ADMIN_PAGE_SIZE, parsePage } from "@/components/admin/admin-pagination";
 
 const STATUS_LABEL: Record<string, string> = {
   OPEN: "지원 모집 중",
@@ -21,10 +22,11 @@ const STATUS_ORDER: Record<string, number> = { OPEN: 0, MATCHED: 1, DELIVERED: 2
 export default async function AdminCommissionsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; status?: string }>;
+  searchParams: Promise<{ q?: string; status?: string; page?: string }>;
 }) {
-  const { q, status } = await searchParams;
+  const { q, status, page: pageParam } = await searchParams;
   const query = (q ?? "").trim();
+  const page = parsePage(pageParam);
 
   const where: Prisma.CommissionRequestWhereInput = {};
   if (query) {
@@ -32,7 +34,10 @@ export default async function AdminCommissionsPage({
   }
   if (status) where.status = status as CommissionStatus;
 
-  const [requests, totalCount] = await Promise.all([
+  // 정렬 우선순위(OPEN 먼저)가 DB enum 정렬로는 표현 안 돼서 조건에 맞는 전체를 가져와
+  // 메모리에서 정렬한 뒤 페이지 구간만 잘라 보여준다 — 의뢰 건수가 트랙/사용자보다 훨씬
+  // 적어서(구매자가 직접 등록하는 건이라 자연히 적음) 매 요청마다 전체 스캔해도 무리 없음.
+  const [allMatching, totalCount] = await Promise.all([
     prisma.commissionRequest.findMany({
       where,
       orderBy: { createdAt: "desc" },
@@ -46,14 +51,16 @@ export default async function AdminCommissionsPage({
     }),
     prisma.commissionRequest.count(),
   ]);
-  requests.sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status]);
+  allMatching.sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status]);
+  const matchedCount = allMatching.length;
+  const requests = allMatching.slice((page - 1) * ADMIN_PAGE_SIZE, page * ADMIN_PAGE_SIZE);
   const hasFilter = !!(query || status);
 
   return (
     <div>
       <h2 className="text-lg font-semibold">곡 의뢰 관리</h2>
       <p className="mt-1 text-sm text-muted-foreground">
-        전체 {totalCount}건{hasFilter ? ` · 검색 결과 ${requests.length}건` : ""} — 등록부터 납품까지 전체 흐름 확인
+        전체 {totalCount}건{hasFilter ? ` · 검색 결과 ${matchedCount}건` : ""} — 등록부터 납품까지 전체 흐름 확인
       </p>
 
       <form action="/admin/commissions" method="GET" className="mt-4 flex flex-wrap items-center gap-2">
@@ -122,6 +129,13 @@ export default async function AdminCommissionsPage({
           })}
         </div>
       )}
+
+      <AdminPagination
+        page={page}
+        totalCount={matchedCount}
+        baseHref="/admin/commissions"
+        searchParams={{ q, status }}
+      />
     </div>
   );
 }
