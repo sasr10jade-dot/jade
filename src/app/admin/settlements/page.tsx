@@ -20,7 +20,15 @@ export default async function AdminSettlementsPage() {
   return (
     <div className="space-y-10">
       <div>
-        <h2 className="text-lg font-semibold">정산 대기</h2>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-lg font-semibold">정산 대기</h2>
+          <a
+            href="/api/admin/settlements/export"
+            className="rounded-full border border-input px-3 py-1.5 text-xs font-medium hover:bg-muted"
+          >
+            CSV 내보내기 (전체)
+          </a>
+        </div>
         <p className="mt-1 text-sm text-muted-foreground">
           출금 신청 목록 — 실제 은행 송금 후 &quot;지급 완료 처리&quot;를 눌러 기록합니다
         </p>
