@@ -114,7 +114,7 @@ export default async function StudioPage() {
                 <Link
                   key={g.id}
                   href={`/track/${g.track.id}`}
-                  className="flex items-center justify-between rounded-lg border p-3 text-sm transition hover:border-primary/50"
+                  className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border p-3 text-sm transition hover:border-primary/50 sm:flex-nowrap sm:justify-between"
                 >
                   <span className="font-semibold">{g.track.title}</span>
                   <div className="flex items-center gap-3 text-muted-foreground">
@@ -145,11 +145,14 @@ export default async function StudioPage() {
 
       <div className="mt-6 space-y-3">
         {tracks.map((t) => (
-          <div key={t.id} className="flex items-center gap-3 rounded-lg border p-3">
+          <div key={t.id} className="flex flex-wrap items-center gap-3 rounded-lg border p-3">
             <StudioTrackThumbnail trackId={t.id} thumbnailUrl={t.thumbnailUrl} />
-            <Link href={`/track/${t.id}`} className="flex flex-1 items-center justify-between hover:opacity-80">
+            <Link
+              href={`/track/${t.id}`}
+              className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1 hover:opacity-80 sm:flex-nowrap sm:justify-between"
+            >
               <span className="font-semibold">{t.title}</span>
-              <div className="flex items-center gap-3 text-sm text-muted-foreground">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground sm:flex-nowrap sm:gap-3">
                 <span>
                   {t.genre ?? "장르 미정"} · 가이드 {t._count.guides}건 · 판매 {t._count.orders}건
                 </span>
@@ -181,8 +184,11 @@ export default async function StudioPage() {
 
           <div className="mt-3 space-y-2">
             {orders.map((o) => (
-              <div key={o.id} className="flex items-center justify-between rounded-lg border p-3 text-sm">
-                <div>
+              <div
+                key={o.id}
+                className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border p-3 text-sm sm:flex-nowrap sm:justify-between"
+              >
+                <div className="min-w-0">
                   <span className="font-medium">{o.track.title}</span>
                   <span className="ml-2 text-xs text-muted-foreground">
                     {o.buyer.name} · {o.purchasedAt.toLocaleDateString("ko-KR")}
