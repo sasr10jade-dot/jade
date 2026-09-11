@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { requireAdmin } from "@/lib/admin";
+import { requireAdmin, logAdminAction } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
 
 const UpdateTrackSchema = z.object({
@@ -11,7 +11,7 @@ export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { error } = await requireAdmin();
+  const { session, error } = await requireAdmin();
   if (error) return error;
 
   const { id } = await params;
@@ -27,6 +27,13 @@ export async function PATCH(
   const track = await prisma.track.update({
     where: { id },
     data: { removedByAdmin: parsed.data.removedByAdmin },
+  });
+  await logAdminAction(prisma, {
+    actorId: session!.user.id,
+    action: "TRACK_VISIBILITY_CHANGED",
+    targetType: "TRACK",
+    targetId: id,
+    metadata: { removedByAdmin: parsed.data.removedByAdmin },
   });
   return NextResponse.json({ id: track.id, removedByAdmin: track.removedByAdmin });
 }

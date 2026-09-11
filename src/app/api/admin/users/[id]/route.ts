@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { requireAdmin } from "@/lib/admin";
+import { requireAdmin, logAdminAction } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
 
 const UpdateUserSchema = z.object({
@@ -36,7 +36,18 @@ export async function PATCH(
     return NextResponse.json({ error: "변경할 값이 없습니다" }, { status: 400 });
   }
 
+  const before = await prisma.user.findUnique({
+    where: { id },
+    select: { role: true, suspended: true, kycVerified: true },
+  });
   const user = await prisma.user.update({ where: { id }, data: parsed.data });
+  await logAdminAction(prisma, {
+    actorId: session!.user.id,
+    action: "USER_UPDATED",
+    targetType: "USER",
+    targetId: id,
+    metadata: { before, after: parsed.data },
+  });
   return NextResponse.json({
     id: user.id,
     role: user.role,

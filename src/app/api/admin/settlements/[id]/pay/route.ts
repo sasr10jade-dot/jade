@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/admin";
+import { requireAdmin, logAdminAction } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
 
 // 관리자가 정산 신청을 "지급 완료"로 처리 — 실제 은행 송금은 앱 밖에서 수동으로 이뤄지고
@@ -8,7 +8,7 @@ export async function POST(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { error } = await requireAdmin();
+  const { session, error } = await requireAdmin();
   if (error) return error;
 
   const { id } = await params;
@@ -23,6 +23,13 @@ export async function POST(
   const updated = await prisma.settlementRequest.update({
     where: { id },
     data: { status: "PAID", paidAt: new Date() },
+  });
+  await logAdminAction(prisma, {
+    actorId: session!.user.id,
+    action: "SETTLEMENT_PAID",
+    targetType: "SETTLEMENT",
+    targetId: id,
+    metadata: { amount: request.amount, payoutAmount: request.payoutAmount, userId: request.userId },
   });
   return NextResponse.json(updated);
 }

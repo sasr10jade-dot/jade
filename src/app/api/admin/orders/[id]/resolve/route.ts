@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { requireAdmin } from "@/lib/admin";
+import { requireAdmin, logAdminAction } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
 import { calculateRefund } from "@/lib/fee";
 import { creditCash } from "@/lib/cash";
@@ -52,6 +52,13 @@ export async function POST(
           message: `관리자 개입으로 ${order.track.title} 주문이 정산 진행으로 확정되었습니다`,
         })),
       });
+      await logAdminAction(tx, {
+        actorId: session!.user.id,
+        action: "ORDER_DISPUTE_RESOLVED",
+        targetType: "ORDER",
+        targetId: id,
+        metadata: { resolution: "SETTLE", previousStatus: order.status, trackTitle: order.track.title },
+      });
       return result;
     });
     return NextResponse.json(updated);
@@ -83,6 +90,19 @@ export async function POST(
         type: "ORDER_DISPUTE_RESOLVED" as const,
         message: `관리자 개입으로 ${order.track.title} 주문이 환불 처리되었습니다`,
       })),
+    });
+    await logAdminAction(tx, {
+      actorId: session!.user.id,
+      action: "ORDER_DISPUTE_RESOLVED",
+      targetType: "ORDER",
+      targetId: id,
+      metadata: {
+        resolution: "REFUND",
+        previousStatus: order.status,
+        trackTitle: order.track.title,
+        refundAmount: refund.refundAmount,
+        feeRefunded: refund.feeRefunded,
+      },
     });
     return result;
   });

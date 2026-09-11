@@ -48,6 +48,9 @@ export function TrackRow({ track }: { track: TrackWithCreator }) {
       <Badge variant="outline">{track.status}</Badge>
       {track.removedByAdmin && <Badge variant="destructive">관리자 숨김</Badge>}
       {track.removedByCreator && <Badge variant="secondary">크리에이터 비공개</Badge>}
+      <Link href={`/admin/tracks/${track.id}`} className="text-xs text-muted-foreground hover:underline">
+        관리 상세
+      </Link>
       <Button
         variant={track.removedByAdmin ? "default" : "outline"}
         size="sm"

@@ -183,6 +183,7 @@ model User {
   splitsAsPerformer Split[]       @relation("PerformerSplits")
   splitsAsLastActor Split[]       @relation("SplitLastActor")
   splitLogEntries SplitLogEntry[]
+  adminActionLogs AdminActionLog[]
   notifications   Notification[]
   sentNotifications Notification[] @relation("NotificationFrom")
   cashTransactions CashTransaction[]
@@ -494,4 +495,30 @@ model Notification {
   message    String
   read       Boolean           @default(false)
   createdAt  DateTime          @default(now())
+}
+
+enum AdminAction {
+  USER_UPDATED
+  TRACK_VISIBILITY_CHANGED
+  ORDER_DISPUTE_RESOLVED
+  SETTLEMENT_PAID
+}
+
+// 관리자 작업 감사 로그 — 누가/언제/무엇을 바꿨는지 기록. targetType/targetId는 Prisma가
+// 다형 관계(polymorphic relation)를 지원하지 않아 일반 문자열로 둠(User/Track/Order/
+// SettlementRequest 4종을 하나의 FK로 묶을 수 없음) — targetType+targetId 동등 비교로만
+// 조회하므로 관계 없이도 충분. offers/splits 관리자 처리(resolve)는 이미 각자
+// PriceOfferLogEntry/SplitLogEntry로 행위자를 기록하고 있어 여기 중복 기록하지 않는다.
+model AdminActionLog {
+  id         String      @id @default(cuid())
+  actorId    String
+  actor      User        @relation(fields: [actorId], references: [id])
+  action     AdminAction
+  targetType String // "USER" | "TRACK" | "ORDER" | "SETTLEMENT"
+  targetId   String
+  metadata   Json? // 액션별 변경 전/후 스냅샷
+  createdAt  DateTime    @default(now())
+
+  @@index([targetType, targetId])
+  @@index([createdAt])
 }

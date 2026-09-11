@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -44,7 +45,9 @@ export function UserRow({ user, isSelf }: { user: User; isSelf: boolean }) {
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-lg border p-3 text-sm">
       <div className="min-w-0 flex-1">
-        <span className="font-medium">{user.name}</span>
+        <Link href={`/admin/users/${user.id}`} className="font-medium hover:underline">
+          {user.name}
+        </Link>
         <span className="ml-2 text-xs text-muted-foreground">{user.email}</span>
         {isSelf && (
           <Badge variant="outline" className="ml-2 text-xs">
