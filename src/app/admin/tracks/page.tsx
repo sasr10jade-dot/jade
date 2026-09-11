@@ -1,6 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { TrackRow } from "./track-row";
+import { TrackList } from "./track-list";
 import { AdminPagination, ADMIN_PAGE_SIZE, parsePage } from "@/components/admin/admin-pagination";
 
 export default async function AdminTracksPage({
@@ -73,10 +73,8 @@ export default async function AdminTracksPage({
       {tracks.length === 0 ? (
         <p className="mt-4 text-sm text-muted-foreground">조건에 맞는 트랙이 없습니다.</p>
       ) : (
-        <div className="mt-4 space-y-2">
-          {tracks.map((t) => (
-            <TrackRow key={t.id} track={t} />
-          ))}
+        <div className="mt-4">
+          <TrackList tracks={tracks} />
         </div>
       )}
 
