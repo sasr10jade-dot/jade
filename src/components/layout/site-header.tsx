@@ -5,8 +5,15 @@ import { EqualizerButton } from "@/components/layout/equalizer-button";
 import { MobileMenu } from "@/components/layout/mobile-menu";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { prisma } from "@/lib/prisma";
 import { formatKRW } from "@/lib/format";
+import { displayName } from "@/lib/display-name";
 import { DEMO_ACCOUNTS } from "@/lib/demo-accounts";
 
 const IS_DEV = process.env.NODE_ENV !== "production";
@@ -32,14 +39,19 @@ const ROLE_LABEL: Record<string, string> = {
 
 export async function SiteHeader() {
   const session = await auth();
-  const [cashBalance, unreadCount] = session?.user
+  const [profile, unreadCount] = session?.user
     ? await Promise.all([
-        prisma.user
-          .findUnique({ where: { id: session.user.id }, select: { cashBalance: true } })
-          .then((u) => u?.cashBalance),
+        prisma.user.findUnique({
+          where: { id: session.user.id },
+          select: { cashBalance: true, name: true, nickname: true, displayNickname: true },
+        }),
         prisma.notification.count({ where: { userId: session.user.id, read: false } }),
       ])
     : [undefined, 0];
+  const cashBalance = profile?.cashBalance;
+  // 헤더에 노출되는 이름은 세션의 name(가입 시 실명)이 아니라 공개 표시 설정을
+  // 반영한 displayName() 결과여야 닉네임 설정이 즉시 반영된다.
+  const shownName = profile ? displayName(profile) : session?.user?.name;
 
   const navLinks = (
     <>
@@ -70,9 +82,21 @@ export async function SiteHeader() {
 
   const userBlock = session?.user ? (
     <>
-      <Link href="/settings/account" className="text-sm text-muted-foreground hover:text-foreground hover:underline">
-        {session.user.name}
-      </Link>
+      {session.user.isAdmin ? (
+        <DropdownMenu>
+          <DropdownMenuTrigger className="text-sm text-muted-foreground hover:text-foreground hover:underline">
+            {shownName}
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem render={<Link href="/admin">관리자페이지</Link>} />
+            <DropdownMenuItem render={<Link href="/settings/account">회원정보수정</Link>} />
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ) : (
+        <Link href="/settings/account" className="text-sm text-muted-foreground hover:text-foreground hover:underline">
+          {shownName}
+        </Link>
+      )}
       {cashBalance !== undefined && (
         <Link href="/wallet" className="text-sm font-semibold hover:underline">
           {formatKRW(cashBalance)}

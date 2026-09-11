@@ -58,12 +58,27 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     }),
   ],
   callbacks: {
-    jwt({ token, user }) {
+    async jwt({ token, user }) {
       if (user) {
         token.id = user.id as string;
         token.role = user.role;
         token.isAdmin = user.isAdmin;
         token.adminTier = user.adminTier;
+        return token;
+      }
+      // 로그인 시점 이후 발급된 세션(JWT)은 재로그인 전까지 고정되므로, 관리자
+      // 권한 부여/해제/등급변경이 기존 세션에 바로 반영되도록 매 요청마다 최신값으로
+      // 갱신한다 (role/isAdmin/adminTier는 자주 안 바뀌고 조회 비용도 낮음).
+      if (token.id) {
+        const current = await prisma.user.findUnique({
+          where: { id: token.id as string },
+          select: { role: true, isAdmin: true, adminTier: true },
+        });
+        if (current) {
+          token.role = current.role;
+          token.isAdmin = current.isAdmin;
+          token.adminTier = current.adminTier;
+        }
       }
       return token;
     },
