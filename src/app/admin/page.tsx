@@ -1,17 +1,11 @@
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { prisma } from "@/lib/prisma";
 import { formatKRW } from "@/lib/format";
 import { settleExpiredEscrows } from "@/lib/settlement";
 import { getPlatformStats } from "@/lib/admin-stats";
-import { MiniBarChart } from "@/components/mini-bar-chart";
-
-const ROLE_LABEL: Record<string, string> = {
-  CREATOR: "Creator",
-  PERFORMER: "Performer",
-  BUYER: "Buyer",
-  ADMIN: "Admin",
-};
+import { RoleDonutChart } from "@/components/admin/role-donut-chart";
+import { GenreBarChart } from "@/components/admin/genre-bar-chart";
+import { TrendAreaChart } from "@/components/admin/trend-area-chart";
 
 export default async function AdminDashboardPage() {
   await settleExpiredEscrows();
@@ -59,13 +53,7 @@ export default async function AdminDashboardPage() {
         <Card>
           <CardContent>
             <p className="text-xs font-semibold text-muted-foreground">역할별 유저 분포</p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {platformStats.roleBreakdown.map((r) => (
-                <Badge key={r.role} variant="outline">
-                  {ROLE_LABEL[r.role] ?? r.role} {r.count.toLocaleString()}명
-                </Badge>
-              ))}
-            </div>
+            <RoleDonutChart data={platformStats.roleBreakdown} />
           </CardContent>
         </Card>
         <Card>
@@ -74,13 +62,7 @@ export default async function AdminDashboardPage() {
             {platformStats.topGenres.length === 0 ? (
               <p className="mt-3 text-sm text-muted-foreground">장르가 입력된 트랙이 없습니다.</p>
             ) : (
-              <div className="mt-3 flex flex-wrap gap-2">
-                {platformStats.topGenres.map((g) => (
-                  <Badge key={g.genre} variant="outline">
-                    {g.genre} {g.count.toLocaleString()}곡
-                  </Badge>
-                ))}
-              </div>
+              <GenreBarChart data={platformStats.topGenres} />
             )}
           </CardContent>
         </Card>
@@ -90,13 +72,13 @@ export default async function AdminDashboardPage() {
         <Card>
           <CardContent>
             <p className="text-xs font-semibold text-muted-foreground">신규 가입 추이 (최근 14일)</p>
-            <MiniBarChart points={platformStats.signups} formatValue={(v) => `${v}명`} />
+            <TrendAreaChart points={platformStats.signups} formatValue={(v) => `${v}명`} color="chart-2" />
           </CardContent>
         </Card>
         <Card>
           <CardContent>
             <p className="text-xs font-semibold text-muted-foreground">GMV 추이 (최근 14일)</p>
-            <MiniBarChart points={platformStats.gmvTrend} formatValue={formatKRW} />
+            <TrendAreaChart points={platformStats.gmvTrend} formatValue={formatKRW} color="chart-1" />
           </CardContent>
         </Card>
       </div>
