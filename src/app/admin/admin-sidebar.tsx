@@ -16,7 +16,7 @@ type NavGroup = {
 const ADMIN_NAV_GROUPS: NavGroup[] = [
   { label: null, items: [{ href: "/admin", label: "대시보드" }] },
   {
-    label: "운영",
+    label: null,
     items: [
       { href: "/admin/users", label: "사용자" },
       { href: "/admin/tracks", label: "트랙 모더레이션" },
@@ -25,7 +25,7 @@ const ADMIN_NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
-    label: "정산",
+    label: null,
     items: [
       { href: "/admin/settlements", label: "정산", badgeKey: "settlements" },
       { href: "/admin/disputes", label: "분쟁/보류", badgeKey: "disputes" },
