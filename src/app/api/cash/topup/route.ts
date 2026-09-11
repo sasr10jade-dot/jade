@@ -2,14 +2,15 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { creditCash } from "@/lib/cash";
 
 const TopupSchema = z.object({
-  amount: z.number().int().positive().max(10_000_000, "1회 최대 충전액은 1,000만 캐시입니다"),
+  amount: z.number().int().min(10_000, "최소 입금 신청 금액은 10,000 캐시입니다").max(10_000_000, "1회 최대 신청액은 1,000만 캐시입니다"),
+  depositorName: z.string().trim().min(1, "입금자명을 입력해주세요").max(30, "입금자명이 너무 깁니다"),
 });
 
-// 원화 결제(개발용 모의 결제 — 토스페이먼츠 연동 전, checkout과 동일 패턴) → VOICE Cash
-// 1:1 충전. 실 서비스에선 이 자리가 실제 PG 콜백 검증 지점이 된다.
+// 무통장 입금(PG 연동 전 임시 결제 수단) 신청 생성 — 여기선 캐시가 움직이지 않는다.
+// 관리자가 실제 계좌 입금을 대조 확인해 /api/admin/deposits/[id]/confirm을 호출할 때만
+// creditCash가 실행된다.
 export async function POST(req: Request) {
   const session = await auth();
   if (!session?.user) {
@@ -25,9 +26,26 @@ export async function POST(req: Request) {
     );
   }
 
-  const balance = await prisma.$transaction((tx) =>
-    creditCash(tx, session.user.id, parsed.data.amount, "TOPUP", { memo: "모의 결제 충전" })
-  );
+  const request = await prisma.cashTopupRequest.create({
+    data: {
+      userId: session.user.id,
+      amount: parsed.data.amount,
+      depositorName: parsed.data.depositorName,
+    },
+  });
 
-  return NextResponse.json({ cashBalance: balance });
+  return NextResponse.json(request, { status: 201 });
+}
+
+export async function GET() {
+  const session = await auth();
+  if (!session?.user) {
+    return NextResponse.json({ error: "로그인이 필요합니다" }, { status: 401 });
+  }
+
+  const requests = await prisma.cashTopupRequest.findMany({
+    where: { userId: session.user.id },
+    orderBy: { requestedAt: "desc" },
+  });
+  return NextResponse.json(requests);
 }

@@ -52,7 +52,7 @@ export async function getPlatformStats() {
 // 어드민 사이드바 네비 뱃지 — 각 카운트는 해당 페이지가 실제로 보여주는 "처리 대상" 건수와
 // 정확히 일치시킴 (예: 분쟁/보류는 STALLED Split + DISPUTED Order + STALLED PriceOffer 3종 전부).
 export async function getAdminBadgeCounts() {
-  const [stalledSplits, disputedOrders, stalledOffers, pendingSettlements, openTickets, openReports] =
+  const [stalledSplits, disputedOrders, stalledOffers, pendingSettlements, openTickets, openReports, pendingDeposits] =
     await Promise.all([
       prisma.split.count({ where: { status: "STALLED" } }),
       prisma.order.count({ where: { status: "DISPUTED" } }),
@@ -60,6 +60,7 @@ export async function getAdminBadgeCounts() {
       prisma.settlementRequest.count({ where: { status: "PENDING" } }),
       prisma.supportTicket.count({ where: { status: "OPEN" } }),
       prisma.report.count({ where: { status: "OPEN" } }),
+      prisma.cashTopupRequest.count({ where: { status: "PENDING" } }),
     ]);
 
   return {
@@ -67,5 +68,6 @@ export async function getAdminBadgeCounts() {
     settlements: pendingSettlements,
     support: openTickets,
     reports: openReports,
+    deposits: pendingDeposits,
   };
 }

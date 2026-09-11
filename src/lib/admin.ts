@@ -27,7 +27,7 @@ export async function requireSuperAdmin() {
 type AdminActionInput = {
   actorId: string;
   action: AdminAction;
-  targetType: "USER" | "TRACK" | "ORDER" | "SETTLEMENT" | "REPORT";
+  targetType: "USER" | "TRACK" | "ORDER" | "SETTLEMENT" | "REPORT" | "DEPOSIT";
   targetId: string;
   metadata?: Prisma.InputJsonValue;
 };
@@ -51,6 +51,8 @@ export const ADMIN_ACTION_LABEL: Record<string, string> = {
   ADMIN_ACCESS_GRANTED: "관리자 권한 부여",
   ADMIN_ACCESS_REVOKED: "관리자 권한 해제",
   ADMIN_TIER_CHANGED: "관리자 등급 변경",
+  DEPOSIT_CONFIRMED: "입금 확인 처리",
+  DEPOSIT_REJECTED: "입금 거절 처리",
 };
 
 // AdminActionLog.metadata는 Json이라 스키마가 없음 — TRACK_VISIBILITY_CHANGED만 선택적으로

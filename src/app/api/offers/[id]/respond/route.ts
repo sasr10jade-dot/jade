@@ -77,36 +77,48 @@ export async function POST(
   }
 
   if (parsed.data.action === "ACCEPT") {
-    const order = await prisma.$transaction(async (tx) => {
-      const created = await createOrderAtPrice(tx, {
-        trackId: offer.trackId,
-        trackTitle: offer.track.title,
-        licenseId: offer.licenseId,
-        licenseType: offer.license.type as LicenseType,
-        buyerId: offer.buyerId,
-        price: offer.amount,
-        creatorId: offer.track.creatorId,
-        isSeedCreator: offer.track.creator.isSeedCreator,
-        seedPromoUntil: offer.track.creator.seedPromoUntil,
+    try {
+      const order = await prisma.$transaction(async (tx) => {
+        const created = await createOrderAtPrice(tx, {
+          trackId: offer.trackId,
+          trackTitle: offer.track.title,
+          licenseId: offer.licenseId,
+          licenseType: offer.license.type as LicenseType,
+          buyerId: offer.buyerId,
+          price: offer.amount,
+          creatorId: offer.track.creatorId,
+          isSeedCreator: offer.track.creator.isSeedCreator,
+          seedPromoUntil: offer.track.creator.seedPromoUntil,
+        });
+        await tx.priceOffer.update({
+          where: { id },
+          data: { status: "ACCEPTED", lastActorId: session.user.id, orderId: created.id },
+        });
+        await tx.priceOfferLogEntry.create({
+          data: { offerId: id, actorId: session.user.id, action: "ACCEPT", amount: offer.amount },
+        });
+        await tx.notification.create({
+          data: {
+            userId: counterpartId,
+            fromUserId: session.user.id,
+            type: "OFFER_ACCEPTED",
+            message: `가격 제안 수락: ${offer.track.title} ${offer.amount.toLocaleString()}원에 구매가 확정되었습니다`,
+          },
+        });
+        return created;
       });
-      await tx.priceOffer.update({
-        where: { id },
-        data: { status: "ACCEPTED", lastActorId: session.user.id, orderId: created.id },
-      });
-      await tx.priceOfferLogEntry.create({
-        data: { offerId: id, actorId: session.user.id, action: "ACCEPT", amount: offer.amount },
-      });
-      await tx.notification.create({
-        data: {
-          userId: counterpartId,
-          fromUserId: session.user.id,
-          type: "OFFER_ACCEPTED",
-          message: `가격 제안 수락: ${offer.track.title} ${offer.amount.toLocaleString()}원에 구매가 확정되었습니다`,
-        },
-      });
-      return created;
-    });
-    return NextResponse.json({ ok: true, status: "ACCEPTED", orderId: order.id });
+      return NextResponse.json({ ok: true, status: "ACCEPTED", orderId: order.id });
+    } catch (error) {
+      if (error instanceof Error && error.message === "INSUFFICIENT_CASH") {
+        // 이 액션은 크리에이터가 누르지만 차감 대상은 구매자 캐시 — 수락자(크리에이터)에게
+        // 보이는 메시지이므로 누구의 잔액이 부족한지 명확히 알려준다.
+        return NextResponse.json(
+          { error: "구매자의 캐시 잔액이 부족해 수락할 수 없습니다" },
+          { status: 402 }
+        );
+      }
+      throw error;
+    }
   }
 
   // COUNTER

@@ -157,6 +157,27 @@ model SettlementRequest {
   paidAt        DateTime?
 }
 
+enum CashTopupRequestStatus {
+  PENDING
+  CONFIRMED
+  REJECTED
+}
+
+// 무통장 입금 신청 — PG 연동 전 임시 결제 수단. SettlementRequest와 반대 방향: 신청
+// 시점엔 캐시가 움직이지 않고, 관리자가 실제 입금을 대조 확인해 CONFIRMED로 처리할
+// 때만 creditCash가 실행된다.
+model CashTopupRequest {
+  id             String                 @id @default(cuid())
+  userId         String
+  user           User                   @relation(fields: [userId], references: [id])
+  amount         Int
+  depositorName  String // 입금자명 — 실제 계좌 입금 내역과 대조하는 유일한 단서
+  status         CashTopupRequestStatus @default(PENDING)
+  requestedAt    DateTime               @default(now())
+  processedAt    DateTime?
+  rejectedReason String?
+}
+
 model User {
   id           String   @id @default(cuid())
   email        String   @unique
@@ -195,6 +216,7 @@ model User {
   sentNotifications Notification[] @relation("NotificationFrom")
   cashTransactions CashTransaction[]
   settlementRequests SettlementRequest[]
+  cashTopupRequests CashTopupRequest[]
   offersAsBuyer     PriceOffer[]         @relation("BuyerOffers")
   offersAsLastActor PriceOffer[]         @relation("OfferLastActor")
   priceOfferLogEntries PriceOfferLogEntry[]
@@ -538,6 +560,8 @@ enum AdminAction {
   ADMIN_ACCESS_GRANTED
   ADMIN_ACCESS_REVOKED
   ADMIN_TIER_CHANGED
+  DEPOSIT_CONFIRMED
+  DEPOSIT_REJECTED
 }
 
 enum AdminTier {

@@ -27,6 +27,7 @@ const ADMIN_NAV_GROUPS: NavGroup[] = [
   {
     label: null,
     items: [
+      { href: "/admin/deposits", label: "입금 확인", badgeKey: "deposits" },
       { href: "/admin/settlements", label: "정산", badgeKey: "settlements" },
       { href: "/admin/disputes", label: "분쟁/보류", badgeKey: "disputes" },
     ],

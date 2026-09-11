@@ -3,9 +3,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { formatKRW } from "@/lib/format";
-import { MIN_SETTLEMENT_AMOUNT } from "@/lib/cash";
+import { MIN_SETTLEMENT_AMOUNT, isDepositBankConfigured } from "@/lib/cash";
 import { settleExpiredEscrows } from "@/lib/settlement";
-import { TopupForm, SettlementRequestButton } from "./wallet-actions";
+import { DepositRequestForm, SettlementRequestButton } from "./wallet-actions";
 
 const TX_LABEL: Record<string, string> = {
   TOPUP: "충전",
@@ -20,6 +20,12 @@ const SETTLEMENT_STATUS_LABEL: Record<string, string> = {
   PAID: "지급 완료",
 };
 
+const DEPOSIT_STATUS_LABEL: Record<string, string> = {
+  PENDING: "확인 대기",
+  CONFIRMED: "입금 확인 완료",
+  REJECTED: "거절됨",
+};
+
 export default async function WalletPage() {
   const session = await auth();
   await settleExpiredEscrows();
@@ -31,7 +37,7 @@ export default async function WalletPage() {
     );
   }
 
-  const [user, transactions, settlementRequests] = await Promise.all([
+  const [user, transactions, settlementRequests, depositRequests] = await Promise.all([
     prisma.user.findUniqueOrThrow({ where: { id: session.user.id } }),
     prisma.cashTransaction.findMany({
       where: { userId: session.user.id },
@@ -43,7 +49,13 @@ export default async function WalletPage() {
       where: { userId: session.user.id },
       orderBy: { requestedAt: "desc" },
     }),
+    prisma.cashTopupRequest.findMany({
+      where: { userId: session.user.id },
+      orderBy: { requestedAt: "desc" },
+    }),
   ]);
+
+  const bankConfigured = isDepositBankConfigured();
 
   const canRequestSettlement =
     user.kycVerified && user.cashBalance >= MIN_SETTLEMENT_AMOUNT;
@@ -62,13 +74,49 @@ export default async function WalletPage() {
         </CardContent>
       </Card>
 
-      <h2 className="mt-8 text-lg font-semibold">충전</h2>
-      <p className="text-sm text-muted-foreground">
-        구매 시 잔액이 부족하면 자동으로 충전되지만, 미리 충전해둘 수도 있습니다
-      </p>
-      <div className="mt-3">
-        <TopupForm />
-      </div>
+      <h2 className="mt-8 text-lg font-semibold">충전 (무통장 입금)</h2>
+      {bankConfigured ? (
+        <>
+          <p className="text-sm text-muted-foreground">
+            아래 계좌로 입금 후, 실제 입금하신 입금자명과 금액을 정확히 입력해 신청해주세요.
+            관리자 확인 후 캐시가 적립됩니다.
+          </p>
+          <Card className="mt-3">
+            <CardContent className="text-sm">
+              <p>
+                {process.env.DEPOSIT_BANK_NAME} {process.env.DEPOSIT_BANK_ACCOUNT}
+              </p>
+              <p className="text-muted-foreground">예금주: {process.env.DEPOSIT_BANK_HOLDER}</p>
+            </CardContent>
+          </Card>
+          <div className="mt-3">
+            <DepositRequestForm />
+          </div>
+        </>
+      ) : (
+        <p className="mt-1 text-sm text-muted-foreground">
+          입금 계좌 정보가 아직 등록되지 않았습니다. 관리자에게 문의해주세요.
+        </p>
+      )}
+
+      {depositRequests.length > 0 && (
+        <div className="mt-4 space-y-2">
+          {depositRequests.map((r) => (
+            <div key={r.id} className="flex items-center justify-between rounded-lg border p-3 text-sm">
+              <div>
+                <span className="font-medium">{formatKRW(r.amount)}</span>
+                <span className="ml-2 text-xs text-muted-foreground">입금자명: {r.depositorName}</span>
+                {r.status === "REJECTED" && r.rejectedReason && (
+                  <div className="text-xs text-muted-foreground">사유: {r.rejectedReason}</div>
+                )}
+              </div>
+              <Badge variant={r.status === "REJECTED" ? "destructive" : "outline"}>
+                {DEPOSIT_STATUS_LABEL[r.status] ?? r.status}
+              </Badge>
+            </div>
+          ))}
+        </div>
+      )}
 
       <h2 className="mt-8 text-lg font-semibold">정산 신청</h2>
       <p className="text-sm text-muted-foreground">

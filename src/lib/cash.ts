@@ -63,3 +63,9 @@ export async function debitCash(
 export const MIN_SETTLEMENT_AMOUNT = 50000;
 // 사업소득 원천징수율 — 정산 신청 시 자동 계산.
 export const WITHHOLDING_RATE = 0.033;
+
+// 무통장 입금 계좌 정보가 아직 설정 안 됐으면(실 계좌 준비 전) 지갑 페이지가 신청 폼
+// 대신 안내 문구를 보여주도록 — 환경변수 미설정 상태로도 배포가 깨지지 않게 한다.
+export function isDepositBankConfigured(): boolean {
+  return !!(process.env.DEPOSIT_BANK_NAME && process.env.DEPOSIT_BANK_ACCOUNT && process.env.DEPOSIT_BANK_HOLDER);
+}

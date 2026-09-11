@@ -45,19 +45,28 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "선택한 라이선스가 존재하지 않습니다" }, { status: 400 });
   }
 
-  const order = await prisma.$transaction((tx) =>
-    createOrderAtPrice(tx, {
-      trackId,
-      trackTitle: track.title,
-      licenseId: license.id,
-      licenseType: licenseType as LicenseType,
-      buyerId: session.user.id,
-      price: license.price,
-      creatorId: track.creatorId,
-      isSeedCreator: track.creator.isSeedCreator,
-      seedPromoUntil: track.creator.seedPromoUntil,
-    })
-  );
-
-  return NextResponse.json(order, { status: 201 });
+  try {
+    const order = await prisma.$transaction((tx) =>
+      createOrderAtPrice(tx, {
+        trackId,
+        trackTitle: track.title,
+        licenseId: license.id,
+        licenseType: licenseType as LicenseType,
+        buyerId: session.user.id,
+        price: license.price,
+        creatorId: track.creatorId,
+        isSeedCreator: track.creator.isSeedCreator,
+        seedPromoUntil: track.creator.seedPromoUntil,
+      })
+    );
+    return NextResponse.json(order, { status: 201 });
+  } catch (error) {
+    if (error instanceof Error && error.message === "INSUFFICIENT_CASH") {
+      return NextResponse.json(
+        { error: "캐시 잔액이 부족합니다. 무통장 입금으로 먼저 충전해주세요" },
+        { status: 402 }
+      );
+    }
+    throw error;
+  }
 }

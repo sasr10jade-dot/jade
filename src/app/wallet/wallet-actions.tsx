@@ -5,30 +5,39 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-export function TopupForm() {
+export function DepositRequestForm() {
   const router = useRouter();
   const [amount, setAmount] = useState("50000");
+  const [depositorName, setDepositorName] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
 
-  async function handleTopup() {
+  async function handleSubmit() {
     const n = Number(amount);
     if (!Number.isFinite(n) || n <= 0) {
       setError("올바른 금액을 입력해주세요");
       return;
     }
+    if (!depositorName.trim()) {
+      setError("입금자명을 입력해주세요");
+      return;
+    }
     setBusy(true);
     setError(null);
+    setSuccess(false);
     try {
       const res = await fetch("/api/cash/topup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: n }),
+        body: JSON.stringify({ amount: n, depositorName: depositorName.trim() }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.error ?? "충전에 실패했습니다");
+        throw new Error(data.error ?? "신청에 실패했습니다");
       }
+      setDepositorName("");
+      setSuccess(true);
       router.refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : "오류가 발생했습니다");
@@ -40,18 +49,32 @@ export function TopupForm() {
   return (
     <div className="flex flex-wrap items-end gap-2">
       <div className="w-40">
+        <label className="text-xs text-muted-foreground">입금액</label>
         <Input
           type="number"
-          min={1000}
+          min={10_000}
           step={1000}
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
         />
       </div>
-      <Button onClick={handleTopup} disabled={busy}>
-        {busy ? "충전 중..." : "충전하기 (모의 결제)"}
+      <div className="w-40">
+        <label className="text-xs text-muted-foreground">입금자명</label>
+        <Input
+          value={depositorName}
+          onChange={(e) => setDepositorName(e.target.value)}
+          placeholder="실제 입금자명"
+        />
+      </div>
+      <Button onClick={handleSubmit} disabled={busy}>
+        {busy ? "신청 중..." : "입금 신청"}
       </Button>
       {error && <p className="w-full text-sm text-destructive">{error}</p>}
+      {success && !error && (
+        <p className="w-full text-sm text-primary">
+          신청이 접수되었습니다. 관리자 확인 후 캐시가 적립됩니다.
+        </p>
+      )}
     </div>
   );
 }
