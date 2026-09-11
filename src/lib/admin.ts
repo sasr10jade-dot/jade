@@ -30,3 +30,21 @@ export async function logAdminAction(
 ) {
   await db.adminActionLog.create({ data: { actorId, action, targetType, targetId, metadata } });
 }
+
+// /admin/activity, /admin/users/[id], /admin/tracks/[id] 세 곳에서 공유하는 표시용 헬퍼.
+export const ADMIN_ACTION_LABEL: Record<string, string> = {
+  USER_UPDATED: "사용자 정보 변경",
+  TRACK_VISIBILITY_CHANGED: "트랙 노출 상태 변경",
+  ORDER_DISPUTE_RESOLVED: "주문 분쟁 처리",
+  SETTLEMENT_PAID: "정산 지급 완료",
+};
+
+// AdminActionLog.metadata는 Json이라 스키마가 없음 — TRACK_VISIBILITY_CHANGED만 선택적으로
+// { reason: string } 을 담을 수 있어(숨김 처리 시 관리자가 입력) 안전하게 꺼내 쓴다.
+export function getAdminActionReason(metadata: unknown): string | null {
+  if (metadata && typeof metadata === "object" && "reason" in metadata) {
+    const reason = (metadata as { reason?: unknown }).reason;
+    return typeof reason === "string" && reason.length > 0 ? reason : null;
+  }
+  return null;
+}

@@ -3,13 +3,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { prisma } from "@/lib/prisma";
 import { formatKRW } from "@/lib/format";
-
-const ADMIN_ACTION_LABEL: Record<string, string> = {
-  USER_UPDATED: "사용자 정보 변경",
-  TRACK_VISIBILITY_CHANGED: "트랙 노출 상태 변경",
-  ORDER_DISPUTE_RESOLVED: "주문 분쟁 처리",
-  SETTLEMENT_PAID: "정산 지급 완료",
-};
+import { ADMIN_ACTION_LABEL } from "@/lib/admin";
 
 // 관리자 전용 읽기 전용 상세 — 지원/모더레이션 케이스 조사용. 역할/정지/KYC 변경은
 // 여전히 /admin/users 목록의 UserRow에서만(중복 액션 UI 방지).

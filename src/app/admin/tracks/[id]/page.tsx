@@ -3,13 +3,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { prisma } from "@/lib/prisma";
 import { formatKRW } from "@/lib/format";
-
-const ADMIN_ACTION_LABEL: Record<string, string> = {
-  USER_UPDATED: "사용자 정보 변경",
-  TRACK_VISIBILITY_CHANGED: "트랙 노출 상태 변경",
-  ORDER_DISPUTE_RESOLVED: "주문 분쟁 처리",
-  SETTLEMENT_PAID: "정산 지급 완료",
-};
+import { ADMIN_ACTION_LABEL, getAdminActionReason } from "@/lib/admin";
 
 // 관리자 전용 읽기 전용 상세 — 모더레이션/분쟁 조사용. 숨김 처리 자체는 여전히
 // /admin/tracks 목록의 TrackRow에서만(중복 액션 UI 방지).
@@ -146,15 +140,19 @@ export default async function AdminTrackDetailPage({
         {adminActions.length === 0 ? (
           <Empty />
         ) : (
-          adminActions.map((a) => (
-            <Row key={a.id}>
-              <span className="min-w-0 flex-1 text-xs text-muted-foreground">
-                {a.createdAt.toLocaleString("ko-KR")}
-              </span>
-              <span className="font-medium">{ADMIN_ACTION_LABEL[a.action] ?? a.action}</span>
-              <span className="text-xs text-muted-foreground">{a.actor.name}</span>
-            </Row>
-          ))
+          adminActions.map((a) => {
+            const reason = getAdminActionReason(a.metadata);
+            return (
+              <Row key={a.id}>
+                <span className="min-w-0 flex-1 text-xs text-muted-foreground">
+                  {a.createdAt.toLocaleString("ko-KR")}
+                </span>
+                <span className="font-medium">{ADMIN_ACTION_LABEL[a.action] ?? a.action}</span>
+                {reason && <span className="text-xs text-muted-foreground">사유: {reason}</span>}
+                <span className="text-xs text-muted-foreground">{a.actor.name}</span>
+              </Row>
+            );
+          })
         )}
       </Section>
     </div>

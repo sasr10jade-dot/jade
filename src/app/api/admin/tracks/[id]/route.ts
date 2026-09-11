@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 
 const UpdateTrackSchema = z.object({
   removedByAdmin: z.boolean(),
+  reason: z.string().trim().min(1).optional(), // 숨김 처리 시(선택) — 왜 숨겼는지 감사 로그에 남김
 });
 
 export async function PATCH(
@@ -33,7 +34,7 @@ export async function PATCH(
     action: "TRACK_VISIBILITY_CHANGED",
     targetType: "TRACK",
     targetId: id,
-    metadata: { removedByAdmin: parsed.data.removedByAdmin },
+    metadata: { removedByAdmin: parsed.data.removedByAdmin, reason: parsed.data.reason },
   });
   return NextResponse.json({ id: track.id, removedByAdmin: track.removedByAdmin });
 }

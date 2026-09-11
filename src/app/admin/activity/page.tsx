@@ -2,13 +2,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { prisma } from "@/lib/prisma";
 import { AdminPagination, ADMIN_PAGE_SIZE, parsePage } from "@/components/admin/admin-pagination";
-
-const ADMIN_ACTION_LABEL: Record<string, string> = {
-  USER_UPDATED: "사용자 정보 변경",
-  TRACK_VISIBILITY_CHANGED: "트랙 노출 상태 변경",
-  ORDER_DISPUTE_RESOLVED: "주문 분쟁 처리",
-  SETTLEMENT_PAID: "정산 지급 완료",
-};
+import { ADMIN_ACTION_LABEL, getAdminActionReason } from "@/lib/admin";
 
 // 관리자 감사 로그 — 전체 관리자 작업 이력을 시간순으로 조회. offers/splits 관리자 처리는
 // 이미 /admin/disputes에서 각자의 로그(PriceOfferLogEntry/SplitLogEntry)를 보여주고
@@ -40,24 +34,28 @@ export default async function AdminActivityPage({
         <p className="mt-4 text-sm text-muted-foreground">아직 기록된 작업이 없습니다.</p>
       ) : (
         <div className="mt-4 space-y-2">
-          {entries.map((e) => (
-            <div key={e.id} className="flex flex-wrap items-center gap-3 rounded-lg border p-3 text-sm">
-              <span className="w-40 shrink-0 text-xs text-muted-foreground">
-                {e.createdAt.toLocaleString("ko-KR")}
-              </span>
-              <span className="shrink-0 font-medium">{e.actor.name}</span>
-              <Badge variant="outline">{ADMIN_ACTION_LABEL[e.action] ?? e.action}</Badge>
-              {targetHref(e.targetType, e.targetId) ? (
-                <Link href={targetHref(e.targetType, e.targetId)!} className="text-xs text-primary hover:underline">
-                  대상 보기 →
-                </Link>
-              ) : (
-                <span className="text-xs text-muted-foreground">
-                  {e.targetType} #{e.targetId}
+          {entries.map((e) => {
+            const reason = getAdminActionReason(e.metadata);
+            return (
+              <div key={e.id} className="flex flex-wrap items-center gap-3 rounded-lg border p-3 text-sm">
+                <span className="w-40 shrink-0 text-xs text-muted-foreground">
+                  {e.createdAt.toLocaleString("ko-KR")}
                 </span>
-              )}
-            </div>
-          ))}
+                <span className="shrink-0 font-medium">{e.actor.name}</span>
+                <Badge variant="outline">{ADMIN_ACTION_LABEL[e.action] ?? e.action}</Badge>
+                {reason && <span className="text-xs text-muted-foreground">사유: {reason}</span>}
+                {targetHref(e.targetType, e.targetId) ? (
+                  <Link href={targetHref(e.targetType, e.targetId)!} className="text-xs text-primary hover:underline">
+                    대상 보기 →
+                  </Link>
+                ) : (
+                  <span className="text-xs text-muted-foreground">
+                    {e.targetType} #{e.targetId}
+                  </span>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
 
