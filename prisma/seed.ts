@@ -91,7 +91,14 @@ async function main() {
     data: { name: "민수", email: "minsu@voicemap.test", passwordHash, role: "BUYER" },
   });
   await prisma.user.create({
-    data: { name: "관리자", email: "admin@voicemap.test", passwordHash, role: "ADMIN" },
+    data: {
+      name: "관리자",
+      email: "admin@voicemap.test",
+      passwordHash,
+      role: "BUYER",
+      isAdmin: true,
+      adminTier: "SUPER",
+    },
   });
 
   // --- Tracks + Licenses (Discover / Checkout pricing) ---

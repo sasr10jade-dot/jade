@@ -3,7 +3,7 @@ import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { authConfig } from "@/auth.config";
-import type { Role } from "@prisma/client";
+import type { AdminTier, Role } from "@prisma/client";
 
 declare module "next-auth" {
   interface Session {
@@ -12,10 +12,14 @@ declare module "next-auth" {
       role: Role;
       name: string;
       email: string;
+      isAdmin: boolean;
+      adminTier: AdminTier | null;
     };
   }
   interface User {
     role: Role;
+    isAdmin: boolean;
+    adminTier: AdminTier | null;
   }
 }
 
@@ -47,6 +51,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           name: user.name,
           email: user.email,
           role: user.role,
+          isAdmin: user.isAdmin,
+          adminTier: user.adminTier,
         };
       },
     }),
@@ -56,12 +62,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (user) {
         token.id = user.id as string;
         token.role = user.role;
+        token.isAdmin = user.isAdmin;
+        token.adminTier = user.adminTier;
       }
       return token;
     },
     session({ session, token }) {
       session.user.id = token.id as string;
       session.user.role = token.role as Role;
+      session.user.isAdmin = token.isAdmin as boolean;
+      session.user.adminTier = token.adminTier as AdminTier | null;
       return session;
     },
   },

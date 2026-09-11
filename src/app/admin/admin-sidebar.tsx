@@ -7,10 +7,13 @@ import type { getAdminBadgeCounts } from "@/lib/admin-stats";
 
 type BadgeCounts = Awaited<ReturnType<typeof getAdminBadgeCounts>>;
 
-const ADMIN_NAV_GROUPS: {
+type NavGroup = {
   label: string | null;
   items: { href: string; label: string; badgeKey?: keyof BadgeCounts }[];
-}[] = [
+  accent?: boolean; // 최고관리자 전용 그룹 — 다른 그룹과 시각적으로 분리(구분선 + 강조색)
+};
+
+const ADMIN_NAV_GROUPS: NavGroup[] = [
   { label: null, items: [{ href: "/admin", label: "대시보드" }] },
   {
     label: "운영",
@@ -37,15 +40,38 @@ const ADMIN_NAV_GROUPS: {
   },
 ];
 
-export function AdminSidebar({ badgeCounts }: { badgeCounts: BadgeCounts }) {
+const SUPER_ADMIN_GROUP: NavGroup = {
+  label: "최고관리자",
+  accent: true,
+  items: [{ href: "/admin/admins", label: "관리자 계정" }],
+};
+
+export function AdminSidebar({
+  badgeCounts,
+  isSuperAdmin,
+}: {
+  badgeCounts: BadgeCounts;
+  isSuperAdmin: boolean;
+}) {
   const pathname = usePathname();
+  const groups = isSuperAdmin ? [...ADMIN_NAV_GROUPS, SUPER_ADMIN_GROUP] : ADMIN_NAV_GROUPS;
 
   return (
     <nav className="flex shrink-0 flex-col gap-5 sm:w-48">
-      {ADMIN_NAV_GROUPS.map((group, i) => (
-        <div key={i}>
+      {groups.map((group, i) => (
+        <div
+          key={i}
+          className={group.accent ? "border-t border-primary/30 pt-4" : undefined}
+        >
           {group.label && (
-            <p className="mb-1.5 px-3 text-xs font-semibold text-muted-foreground">{group.label}</p>
+            <p
+              className={cn(
+                "mb-1.5 px-3 text-xs font-semibold",
+                group.accent ? "text-primary" : "text-muted-foreground"
+              )}
+            >
+              {group.label}
+            </p>
           )}
           <div className="flex flex-col gap-0.5">
             {group.items.map((item) => {

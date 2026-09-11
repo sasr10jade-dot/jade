@@ -35,7 +35,7 @@ export default async function SupportTicketPage({
   });
   if (!ticket) notFound();
 
-  const isAdmin = session.user.role === "ADMIN";
+  const isAdmin = session.user.isAdmin;
   const isOwner = ticket.userId === session.user.id;
   if (!isAdmin && !isOwner) notFound();
 

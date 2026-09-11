@@ -4,7 +4,9 @@ import { prisma } from "@/lib/prisma";
 import { UserList } from "./user-list";
 import { AdminPagination, ADMIN_PAGE_SIZE, parsePage } from "@/components/admin/admin-pagination";
 
-const ROLE_OPTIONS = ["CREATOR", "PERFORMER", "BUYER", "ADMIN"] as const;
+// ADMIN은 더 이상 role 값이 아니라 별도 isAdmin/adminTier 플래그 — 관리자 부여는
+// /admin/admins(최고관리자 전용)에서만 하므로 여기 필터 옵션에서 제외.
+const ROLE_OPTIONS = ["CREATOR", "PERFORMER", "BUYER"] as const;
 
 export default async function AdminUsersPage({
   searchParams,

@@ -57,7 +57,7 @@ export async function SiteHeader() {
           )}
         </Link>
       ))}
-      {session?.user?.role === "ADMIN" && (
+      {session?.user?.isAdmin && (
         <Link
           href="/admin"
           className="shrink-0 rounded-md px-2.5 py-2 whitespace-nowrap text-muted-foreground transition hover:bg-muted hover:text-foreground"

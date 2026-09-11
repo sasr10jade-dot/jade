@@ -3,8 +3,9 @@ import { z } from "zod";
 import { requireAdmin, logAdminAction } from "@/lib/admin";
 import { prisma } from "@/lib/prisma";
 
+// ADMIN은 여기서 부여 불가 — 별도 isAdmin/adminTier로 관리(/api/admin/admins, 최고관리자 전용).
 const UpdateUserSchema = z.object({
-  role: z.enum(["CREATOR", "PERFORMER", "BUYER", "ADMIN"]).optional(),
+  role: z.enum(["CREATOR", "PERFORMER", "BUYER"]).optional(),
   suspended: z.boolean().optional(),
   kycVerified: z.boolean().optional(),
 });

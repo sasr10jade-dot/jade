@@ -168,6 +168,13 @@ model User {
   suspended    Boolean  @default(false) // Admin panel — 계정 정지, login blocked while true
   createdAt    DateTime @default(now())
 
+  // 관리자 권한은 role(CREATOR/PERFORMER/BUYER)과 별개 플래그 — 실계정(예: Creator)이
+  // 본업 역할을 유지한 채로 관리자 권한을 겸할 수 있어야 하기 때문. adminTier는
+  // isAdmin=true일 때만 의미 있음(최고관리자=SUPER는 /admin/admins 접근 가능, 운영자=
+  // OPERATOR는 그 외 기존 관리자 기능 전부 동일하게 사용).
+  isAdmin      Boolean   @default(false)
+  adminTier    AdminTier?
+
   // VOICE Cash 지갑 — 1 Cash = 1원, 폐쇄형 포인트(외부 이전/거래 불가).
   cashBalance  Int      @default(0)
   kycVerified  Boolean  @default(false) // 정산 신청 전 필요. 실제 신분증 수집은 앱 밖에서 처리하고
@@ -528,6 +535,14 @@ enum AdminAction {
   ORDER_DISPUTE_RESOLVED
   SETTLEMENT_PAID
   REPORT_RESOLVED
+  ADMIN_ACCESS_GRANTED
+  ADMIN_ACCESS_REVOKED
+  ADMIN_TIER_CHANGED
+}
+
+enum AdminTier {
+  SUPER
+  OPERATOR
 }
 
 // 관리자 작업 감사 로그 — 누가/언제/무엇을 바꿨는지 기록. targetType/targetId는 Prisma가

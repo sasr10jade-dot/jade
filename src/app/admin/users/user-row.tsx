@@ -14,7 +14,8 @@ import {
 } from "@/components/ui/select";
 import type { Role, User } from "@prisma/client";
 
-const ROLES: Role[] = ["CREATOR", "PERFORMER", "BUYER", "ADMIN"];
+// ADMIN은 role 값이 아니라 isAdmin/adminTier로 분리 관리(/admin/admins, 최고관리자 전용).
+const ROLES: Role[] = ["CREATOR", "PERFORMER", "BUYER"];
 
 export function UserRow({ user, isSelf }: { user: User; isSelf: boolean }) {
   const router = useRouter();
@@ -52,6 +53,11 @@ export function UserRow({ user, isSelf }: { user: User; isSelf: boolean }) {
         {isSelf && (
           <Badge variant="outline" className="ml-2 text-xs">
             나
+          </Badge>
+        )}
+        {user.isAdmin && (
+          <Badge variant="secondary" className="ml-2 text-xs">
+            {user.adminTier === "SUPER" ? "최고관리자" : "운영자"}
           </Badge>
         )}
         {user.suspended && (

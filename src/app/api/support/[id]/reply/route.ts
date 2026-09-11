@@ -29,7 +29,7 @@ export async function POST(
     return NextResponse.json({ error: "문의를 찾을 수 없습니다" }, { status: 404 });
   }
 
-  const isAdmin = session.user.role === "ADMIN";
+  const isAdmin = session.user.isAdmin;
   const isOwner = ticket.userId === session.user.id;
   if (!isAdmin && !isOwner) {
     return NextResponse.json({ error: "본인의 문의만 열람할 수 있습니다" }, { status: 403 });

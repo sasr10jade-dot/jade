@@ -7,13 +7,13 @@ import { AdminSidebar } from "./admin-sidebar";
 // 역할 검사는 여기서). 존재를 드러내지 않도록 403 대신 404로 응답.
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
-  if (session?.user?.role !== "ADMIN") notFound();
+  if (!session?.user?.isAdmin) notFound();
 
   const badgeCounts = await getAdminBadgeCounts();
 
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-6 px-5 py-10 sm:flex-row sm:gap-10">
-      <AdminSidebar badgeCounts={badgeCounts} />
+      <AdminSidebar badgeCounts={badgeCounts} isSuperAdmin={session.user.adminTier === "SUPER"} />
       <div className="min-w-0 flex-1">
         <h1 className="text-2xl font-bold tracking-tight">관리자</h1>
         <div className="mt-6">{children}</div>

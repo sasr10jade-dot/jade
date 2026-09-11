@@ -8,8 +8,18 @@ export async function requireAdmin() {
   if (!session?.user) {
     return { session: null, error: NextResponse.json({ error: "로그인이 필요합니다" }, { status: 401 }) };
   }
-  if (session.user.role !== "ADMIN") {
+  if (!session.user.isAdmin) {
     return { session: null, error: NextResponse.json({ error: "관리자만 접근할 수 있습니다" }, { status: 403 }) };
+  }
+  return { session, error: null };
+}
+
+/** /admin/admins처럼 최고관리자 전용인 라우트/페이지용 — 운영자(OPERATOR)는 403. */
+export async function requireSuperAdmin() {
+  const { session, error } = await requireAdmin();
+  if (error) return { session: null, error };
+  if (session!.user.adminTier !== "SUPER") {
+    return { session: null, error: NextResponse.json({ error: "최고관리자만 접근할 수 있습니다" }, { status: 403 }) };
   }
   return { session, error: null };
 }
@@ -38,6 +48,9 @@ export const ADMIN_ACTION_LABEL: Record<string, string> = {
   ORDER_DISPUTE_RESOLVED: "주문 분쟁 처리",
   SETTLEMENT_PAID: "정산 지급 완료",
   REPORT_RESOLVED: "신고 처리",
+  ADMIN_ACCESS_GRANTED: "관리자 권한 부여",
+  ADMIN_ACCESS_REVOKED: "관리자 권한 해제",
+  ADMIN_TIER_CHANGED: "관리자 등급 변경",
 };
 
 // AdminActionLog.metadata는 Json이라 스키마가 없음 — TRACK_VISIBILITY_CHANGED만 선택적으로
