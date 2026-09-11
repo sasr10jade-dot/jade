@@ -1,7 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { UserRow } from "./user-row";
+import { UserList } from "./user-list";
 import { AdminPagination, ADMIN_PAGE_SIZE, parsePage } from "@/components/admin/admin-pagination";
 
 const ROLE_OPTIONS = ["CREATOR", "PERFORMER", "BUYER", "ADMIN"] as const;
@@ -87,10 +87,8 @@ export default async function AdminUsersPage({
       {users.length === 0 ? (
         <p className="mt-4 text-sm text-muted-foreground">조건에 맞는 사용자가 없습니다.</p>
       ) : (
-        <div className="mt-4 space-y-2">
-          {users.map((u) => (
-            <UserRow key={u.id} user={u} isSelf={u.id === session!.user.id} />
-          ))}
+        <div className="mt-4">
+          <UserList users={users} selfId={session!.user.id} />
         </div>
       )}
 
