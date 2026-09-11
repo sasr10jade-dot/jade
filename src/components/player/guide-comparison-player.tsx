@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { extractPeaks, formatTime } from "@/lib/waveform";
+import { formatTime } from "@/lib/waveform";
 import { hashSeed, gradientAngle } from "@/lib/track-visual";
 import { useNativeAudioPlayer } from "@/lib/use-native-audio-player";
 import { AudioVisualizer } from "@/components/audio-visualizer";
+import { useEffect } from "react";
+import { Button } from "@/components/ui/button";
 
 export interface GuideOption {
   id: string;
@@ -15,14 +15,14 @@ export interface GuideOption {
   audioUrl: string;
 }
 
-// 동일 구간 A/B 전환, 파형 표시, 30초 프리뷰 제한(바이어만 — Performer/Creator는 전곡
-// 청취 가능해야 어떤 곡에 가이드를 제출할지 판단할 수 있다).
+// 동일 구간 A/B 전환, 30초 프리뷰 제한(바이어만 — Performer/Creator는 전곡 청취 가능해야
+// 어떤 곡에 가이드를 제출할지 판단할 수 있다). track-player.tsx와 레이아웃(비주얼라이저 +
+// 가로 진행바) 통일.
 //
 // 가이드가 1건뿐이면 비교 UI(A/B 전환 버튼, 두 번째 <audio>) 없이 단일 플레이어로 동작 —
 // 재생 엔진은 네이티브 <audio> + 전역 이퀄라이저(useNativeAudioPlayer) — 준비된 가이드
 // 전부 미리 별도의 <audio> 엘리먼트로 준비해두고, switchTo()로 재생 위치만 맞춰서 즉시 바꿔 끼운다.
 const PREVIEW_SECONDS = 30;
-const BAR_COUNT = 64;
 
 export function GuideComparisonPlayer({
   trackId,
@@ -41,26 +41,6 @@ export function GuideComparisonPlayer({
   );
   const { activeIndex, isPlaying, currentTime, duration, error, audioRefCallbacks, togglePlay, pause, seekTo, seekToSeconds, switchTo } = player;
 
-  const [peaksByGuide, setPeaksByGuide] = useState<Record<string, number[]>>({});
-  const guideIdsKey = guides.map((g) => g.id).join("|");
-
-  useEffect(() => {
-    let cancelled = false;
-    guides.forEach((guide) => {
-      extractPeaks(guide.audioUrl, BAR_COUNT)
-        .then((p) => {
-          if (!cancelled) setPeaksByGuide((prev) => ({ ...prev, [guide.id]: p }));
-        })
-        .catch(() => {
-          if (!cancelled) setPeaksByGuide((prev) => ({ ...prev, [guide.id]: [] }));
-        });
-    });
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [guideIdsKey]);
-
   // 30초 프리뷰 컷오프 — 재생 위치가 넘어가면 즉시 정지하고 정확히 30초 지점으로 고정.
   useEffect(() => {
     if (previewOnly && currentTime >= PREVIEW_SECONDS) {
@@ -71,9 +51,7 @@ export function GuideComparisonPlayer({
   }, [previewOnly, currentTime]);
 
   const active = guides[activeIndex];
-  const peaks = peaksByGuide[active.id];
   const effectiveDuration = previewOnly ? Math.min(duration, PREVIEW_SECONDS) : duration;
-  const progressFraction = effectiveDuration > 0 ? currentTime / effectiveDuration : 0;
   const seed = hashSeed(trackId);
   const angle = gradientAngle(seed);
 
@@ -125,63 +103,25 @@ export function GuideComparisonPlayer({
             )}
           </button>
           <div className="min-w-0 flex-1">
-            <div className="flex items-center justify-between gap-2">
-              <div className="min-w-0">
-                <p className="truncate text-lg font-bold sm:text-xl">{active.label}</p>
-                <p className="truncate text-sm text-muted-foreground">{active.performer}</p>
-              </div>
-              <span className="shrink-0 text-xs text-muted-foreground">
-                {formatTime(currentTime)} / {formatTime(effectiveDuration)}
-              </span>
-            </div>
+            <p className="truncate text-lg font-bold sm:text-xl">{active.label}</p>
+            <p className="truncate text-sm text-muted-foreground">{active.performer}</p>
           </div>
         </div>
 
-        <AudioVisualizer active={isPlaying} className="mt-4 h-10" />
+        <AudioVisualizer active={isPlaying} className="mt-4 h-16" />
 
-        <div
-          role="slider"
-          tabIndex={0}
-          aria-label={`재생 위치 (${active.label})`}
-          aria-valuemin={0}
-          aria-valuemax={Math.max(1, Math.round(effectiveDuration))}
-          aria-valuenow={Math.round(currentTime)}
-          aria-valuetext={`${formatTime(currentTime)} / ${formatTime(effectiveDuration)}`}
-          className="mt-5 flex h-24 cursor-pointer items-end gap-[2px] rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring sm:h-28"
-          onClick={(e) => {
-            const rect = e.currentTarget.getBoundingClientRect();
-            seekTo((e.clientX - rect.left) / rect.width);
-          }}
-          onKeyDown={(e) => {
-            if (!duration) return;
-            if (e.key === "ArrowRight" || e.key === "ArrowUp") {
-              e.preventDefault();
-              seekTo(Math.min(1, (currentTime + 5) / duration));
-            } else if (e.key === "ArrowLeft" || e.key === "ArrowDown") {
-              e.preventDefault();
-              seekTo(Math.max(0, (currentTime - 5) / duration));
-            } else if (e.key === "Home") {
-              e.preventDefault();
-              seekTo(0);
-            } else if (e.key === "End") {
-              e.preventDefault();
-              seekTo(previewOnly ? PREVIEW_SECONDS / duration : 1);
-            }
-          }}
-        >
-          {(peaks ?? Array(BAR_COUNT).fill(0)).map((p, i) => {
-            const played = i / BAR_COUNT < progressFraction;
-            const heightPct = Math.max(8, Math.round(p * 100));
-            return (
-              <div
-                key={i}
-                className={`flex-1 rounded-full transition-colors ${
-                  played ? "bg-primary shadow-[0_0_8px_var(--primary)]" : "bg-foreground/20"
-                }`}
-                style={{ height: `${heightPct}%` }}
-              />
-            );
-          })}
+        <div className="mt-5 flex items-center gap-2">
+          <span className="w-9 shrink-0 text-right text-[11px] text-muted-foreground">{formatTime(currentTime)}</span>
+          <input
+            type="range"
+            min={0}
+            max={effectiveDuration || 0}
+            value={Math.min(currentTime, effectiveDuration || 0)}
+            onChange={(e) => seekTo(Number(e.target.value) / (duration || 1))}
+            aria-label={`재생 위치 (${active.label})`}
+            className="h-1 flex-1 accent-primary"
+          />
+          <span className="w-9 shrink-0 text-[11px] text-muted-foreground">{formatTime(effectiveDuration)}</span>
         </div>
 
         <div className="mt-4 flex items-center justify-between">
